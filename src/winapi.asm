@@ -324,8 +324,19 @@ winDestroyWindow PROC
 	jmp DestroyWindow
 winDestroyWindow ENDP
 
+;
+; dx12 functions
+;
 
+winDX12Init PROC
+	
+	ret
+winDX12Init ENDP
 
+winDX12Exit PROC
+	
+	ret
+winDX12Exit ENDP
 
 
 

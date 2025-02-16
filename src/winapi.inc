@@ -41,3 +41,13 @@ EXTERN winMessageLoop:PROC
 
 ; NOPARAM
 EXTERN winDestroyWindow:PROC
+
+;
+; dx12 functions
+;
+
+; NOPARAM
+EXTERN winDX12Init:PROC
+
+; NOPARAM
+EXTERN winDX12Exit:PROC

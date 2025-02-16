@@ -15,7 +15,11 @@ asm_entry PROC
 
 	call winCreateWindow
 
+	call winDX12Init
+
 	call winMessageLoop
+
+	call winDX12Exit
 
 	call winDestroyWindow
 
