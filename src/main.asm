@@ -7,11 +7,17 @@ asm_entry PROC
 	
 	call winInit
 
-	mov ecx, 100
-	call winHeapAlloc
+	;mov ecx, 100
+	;call winHeapAlloc
+	;
+	;mov rcx, rax
+	;call winHeapFree
 
-	mov rcx, rax
-	call winHeapFree
+	call winCreateWindow
+
+	call winMessageLoop
+
+	call winDestroyWindow
 
 	call winExit
 

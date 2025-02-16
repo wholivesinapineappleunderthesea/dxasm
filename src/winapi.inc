@@ -17,8 +17,6 @@ EXTERN global_windowHandle:QWORD
 EXTERN winInit:PROC
 ; NOPARAM
 EXTERN winExit:PROC
-; NOPARAM
-EXTERN winTerm:PROC
 
 ;
 ; heap functions
@@ -30,3 +28,16 @@ EXTERN winHeapAlloc:PROC
 
 ; RCX : address
 EXTERN winHeapFree:PROC
+
+; 
+; window functions
+;
+
+; NOPARAM
+EXTERN winCreateWindow:PROC
+
+; NOPARAM
+EXTERN winMessageLoop:PROC
+
+; NOPARAM
+EXTERN winDestroyWindow:PROC
