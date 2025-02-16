@@ -248,7 +248,7 @@ _success_createwindow:
 
 
 	add rsp, (28h +  ALIGN_TO_16(sizeof WNDCLASSEXW) + 80h)
-	ret
+	jmp winDispatchMessageQueue
 winCreateWindow ENDP
 
 winDispatchMessageQueue PROC
