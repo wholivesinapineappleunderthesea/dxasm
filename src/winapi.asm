@@ -14,6 +14,7 @@ EXTERN RegisterClassExW: PROC
 EXTERN CreateWindowExW: PROC
 EXTERN ShowWindow: PROC
 EXTERN UpdateWindow: PROC
+EXTERN GetClientRect: PROC
 EXTERN DefWindowProcW: PROC
 EXTERN DestroyWindow: PROC
 EXTERN PeekMessageW: PROC
@@ -56,6 +57,13 @@ MSG STRUCT
 	lPrivate DWORD ?
 MSG ENDS
 
+RECT STRUCT
+	left DWORD ?
+	top DWORD ?
+	right DWORD ?
+	bottom DWORD ?
+RECT ENDS
+
 .DATA
 
 global_moduleSize DWORD 0
@@ -76,7 +84,7 @@ PUBLIC global_moduleFileNameLen
 global_windowHandle QWORD 0
 PUBLIC global_windowHandle
 
-
+local_windowRect RECT <>
 
 local_heapHandle QWORD 0
 
@@ -84,6 +92,7 @@ local_dxFactory QWORD 0
 local_dxAdapter QWORD 0
 local_dxDevice QWORD 0
 local_dxCommandQueue QWORD 0
+local_dxSwapChain QWORD 0
 
 .CONST
 
@@ -254,6 +263,10 @@ _success_createwindow:
 	mov rcx, global_windowHandle
 	call UpdateWindow
 
+	; get window rect
+	mov rcx, global_windowHandle
+	lea rdx, local_windowRect
+	call GetClientRect
 
 
 	add rsp, (28h +  ALIGN_TO_16(sizeof WNDCLASSEXW) + 80h)
@@ -367,7 +380,7 @@ _enum_adapter1_start:
 
 _enum_adapter1_success:
 	mov rcx, local_dxAdapter
-	mov edx, 0b100h ; D3D_FEATURE_LEVEL_11_0
+	mov edx, 0b000h ; D3D_FEATURE_LEVEL_11_0
 	lea r8, IID_ID3D12Device
 	xor r9d, r9d
 	call D3D12CreateDevice
@@ -385,7 +398,7 @@ _enum_adapter1_success:
 _enum_adapter1_device_success:
 
 	mov rcx, local_dxAdapter
-	mov edx, 0b100h ; D3D_FEATURE_LEVEL_11_0
+	mov edx, 0b000h ; D3D_FEATURE_LEVEL_11_0
 	lea r8, IID_ID3D12Device
 	lea r9, local_dxDevice
 	call D3D12CreateDevice
@@ -412,6 +425,38 @@ _success_created3d12device:
 	int 3
 
 _success_created3d12commandqueue:
+
+	lea r8, [rsp + 028h]
+	mov eax, local_windowRect.right
+	sub eax, local_windowRect.left
+	mov dword ptr [r8], eax ; BufferDesc.Width
+	mov eax, local_windowRect.bottom
+	sub eax, local_windowRect.top
+	mov dword ptr [r8 + 4], eax ; BufferDesc.Height
+	mov dword ptr [r8 + 8], 0 ; BufferDesc.RefreshRate.Numerator
+	mov dword ptr [r8 + 0Ch], 0 ; BufferDesc.RefreshRate.Denominator
+	mov dword ptr [r8 + 10h], 28 ; BufferDesc.Format : DXGI_FORMAT_R8G8B8A8_UNORM
+	mov dword ptr [r8 + 14h], 0 ; BufferDesc.ScanlineOrdering : DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED
+	mov dword ptr [r8 + 18h], 0 ; BufferDesc.Scaling : DXGI_MODE_SCALING_UNSPECIFIED
+	mov dword ptr [r8 + 1Ch], 1 ; SampleDesc.Count
+	mov dword ptr [r8 + 20h], 0 ; SampleDesc.Quality
+	mov dword ptr [r8 + 24h], 32 ; BufferUsage : DXGI_USAGE_RENDER_TARGET_OUTPUT
+	mov dword ptr [r8 + 28h], 2 ; BufferCount
+	mov rax, global_windowHandle
+	mov qword ptr [r8 + 30h], rax ; OutputWindow
+	mov dword ptr [r8 + 38h], 1 ; Windowed
+	mov dword ptr [r8 + 3Ch], 4 ; SwapEffect : DXGI_SWAP_EFFECT_FLIP_DISCARD
+	mov dword ptr [r8 + 40h], 0 ; Flags 
+	mov rcx, local_dxFactory
+	mov rdx, local_dxCommandQueue
+	lea r9, local_dxSwapChain
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IDXGIFactory_CreateSwapChain]
+	test eax, eax
+	jns _success_createdxgiswapchain
+	int 3
+
+_success_createdxgiswapchain:
 
 
 
