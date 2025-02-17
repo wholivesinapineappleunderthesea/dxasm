@@ -29,4 +29,4 @@ set_target_properties(dxasm PROPERTIES LINK_FLAGS "/NODEFAULTLIB")
 set_target_properties(dxasm PROPERTIES LINK_FLAGS "/ENTRY:asm_entry")
 
 # link with directx12 libraries
-target_link_libraries(dxasm d3d12.lib dxgi.lib)
+target_link_libraries(dxasm d3d12.lib dxgi.lib dxguid.lib)

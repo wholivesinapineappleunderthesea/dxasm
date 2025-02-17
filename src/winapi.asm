@@ -1,4 +1,5 @@
 INCLUDE masm_macros.inc
+INCLUDE wincomobj.inc
 
 EXTERN GetProcAddress: PROC
 EXTERN GetModuleHandleW: PROC
@@ -19,6 +20,9 @@ EXTERN PeekMessageW: PROC
 EXTERN TranslateMessage: PROC
 EXTERN DispatchMessageW: PROC
 EXTERN PostQuitMessage: PROC
+
+EXTERN CreateDXGIFactory1:PROC
+EXTERN D3D12CreateDevice:PROC
 
 
 
@@ -75,6 +79,10 @@ PUBLIC global_windowHandle
 
 
 local_heapHandle QWORD 0
+
+local_dxFactory QWORD 0
+local_dxAdapter QWORD 0
+local_dxDevice QWORD 0
 
 .CONST
 
@@ -329,12 +337,88 @@ winDestroyWindow ENDP
 ;
 
 winDX12Init PROC
+	sub rsp, 38h
+	mov dword ptr [rsp+028h], 0 ; adapter index
+
+
+
+	lea rcx, IID_IDXGIFactory1
+	lea rdx, local_dxFactory
+	call CreateDXGIFactory1
+	test eax, eax
+	jns _success_createdxgifactory1
+	int 3
+
+_success_createdxgifactory1:
+
 	
+
+
+_enum_adapter1_start:
+	mov rcx, local_dxFactory
+	mov edx, dword ptr [rsp+028h]
+	lea r8, local_dxAdapter
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IDXGIFactory1_EnumAdapters1]
+	test eax, eax
+	jns _enum_adapter1_success
+	int 3
+
+_enum_adapter1_success:
+	mov rcx, local_dxAdapter
+	mov edx, 0b100h ; D3D_FEATURE_LEVEL_11_0
+	lea r8, IID_ID3D12Device
+	xor r9d, r9d
+	call D3D12CreateDevice
+	test eax, eax
+	jns _enum_adapter1_device_success
+
+	inc dword ptr [rsp+028h]
+
+	mov rcx, local_dxAdapter
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxAdapter, 0
+	jmp _enum_adapter1_start
+	
+_enum_adapter1_device_success:
+
+	mov rcx, local_dxAdapter
+	mov edx, 0b100h ; D3D_FEATURE_LEVEL_11_0
+	lea r8, IID_ID3D12Device
+	lea r9, local_dxDevice
+	call D3D12CreateDevice
+	test eax, eax
+	jns _success_created3d12device
+	int 3
+
+_success_created3d12device:
+
+	add rsp, 38h
 	ret
 winDX12Init ENDP
 
 winDX12Exit PROC
-	
+	sub rsp, 28h
+
+	mov rcx, local_dxDevice
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxDevice, 0
+
+	mov rcx, local_dxAdapter
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxAdapter, 0
+
+	mov rcx, local_dxFactory
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxFactory, 0
+
+
+
+	add rsp, 28h
 	ret
 winDX12Exit ENDP
 

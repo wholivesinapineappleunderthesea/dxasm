@@ -2,22 +2,86 @@ VTBL_IUnknown_QueryInterface EQU 0h
 VTBL_IUnknown_AddRef EQU 08h
 VTBL_IUnknown_Release EQU 010h
 
+; IDXGIObject : IUnknown
 ; MIDL_INTERFACE("aec22fb8-76f3-4639-9be0-28eb43a67a2e")
-EXTERN GUID_IDXGIObject:BYTE
+EXTERN IID_IDXGIFactory1:BYTE
 VTBL_IDXGIObject_SetPrivateData EQU 018h
 VTBL_IDXGIObject_SetPrivateDataInterface EQU 020h
 VTBL_IDXGIObject_GetPrivateData EQU 028h
 VTBL_IDXGIObject_GetParent EQU 030h
 
+; IDXGIFactory : IDXGIObject
 ; MIDL_INTERFACE("7b7166ec-21c7-44ae-b21a-c9ae321ae369")
-EXTERN GUID_IDXGIFactory:BYTE
+EXTERN IID_IDXGIFactory:BYTE
 VTBL_IDXGIFactory_EnumAdapters EQU 038h
 VTBL_IDXGIFactory_MakeWindowAssociation EQU 040h
 VTBL_IDXGIFactory_GetWindowAssociation EQU 048h
 VTBL_IDXGIFactory_CreateSwapChain EQU 050h
 VTBL_IDXGIFactory_CreateSoftwareAdapter EQU 058h
 
+; IDXGIFactory1 : IDXGIFactory
 ; MIDL_INTERFACE("770aae78-f26f-4dba-a829-253c83d1b387")
-EXTERN GUID_IDXGIFactory1:BYTE
+EXTERN IID_IDXGIFactory1:BYTE
 VTBL_IDXGIFactory1_EnumAdapters1 EQU 060h
 VTBL_IDXGIFactory1_IsCurrent EQU 068h
+
+; IDXGIAdapter : IDXGIObject
+; MIDL_INTERFACE("2411e7e1-12ac-4ccf-bd14-9798e8534dc0")
+EXTERN IID_IDXGIAdapter:BYTE
+VTBLL_IDXGIAdapter_EnumOutputs EQU 038h
+VTBLL_IDXGIAdapter_GetDesc EQU 040h
+VTBLL_IDXGIAdapter_CheckInterfaceSupport EQU 048h
+
+; IDXGIAdapter1 : IDXGIAdapter
+; MIDL_INTERFACE("29038f61-3839-4626-91fd-086879011a05")
+EXTERN IID_IDXGIAdapter1:BYTE
+VTBL_IDXGIAdapter1_GetDesc1 EQU 050h
+
+; ID3D12Object : IUnknown
+; MIDL_INTERFACE("c4fec28f-7966-4e95-9f94-f431cb56c3b8")
+EXTERN IID_ID3D12Device:BYTE
+VTBL_ID3D12Device_GetPrivateData EQU 018h
+VTBL_ID3D12Device_SetPrivateData EQU 020h
+VTBL_ID3D12Device_SetPrivateDataInterface EQU 028h
+VTBL_ID3D12Device_SetName EQU 030h
+
+; ID3D12Device : ID3D12Object
+; MIDL_INTERFACE("189819f1-1db6-4b57-be54-1821339b85f7")
+EXTERN IID_ID3D12Device:BYTE
+VTBL_ID3D12Device_GetNodeCount EQU 038h
+VTBL_ID3D12Device_CreateCommandQueue EQU 040h
+VTBL_ID3D12Device_CreateCommandAllocator EQU 048h
+VTBL_ID3D12Device_CreateGraphicsPipelineState EQU 050h
+VTBL_ID3D12Device_CreateComputePipelineState EQU 058h
+VTBL_ID3D12Device_CreateCommandList EQU 060h
+VTBL_ID3D12Device_CheckFeatureSupport EQU 068h
+VTBL_ID3D12Device_CreateDescriptorHeap EQU 070h
+VTBL_ID3D12Device_GetDescriptorHandleIncrementSize EQU 078h
+VTBL_ID3D12Device_CreateRootSignature EQU 080h
+VTBL_ID3D12Device_CreateConstantBufferView EQU 088h
+VTBL_ID3D12Device_CreateShaderResourceView EQU 090h
+VTBL_ID3D12Device_CreateUnorderedAccessView EQU 098h
+VTBL_ID3D12Device_CreateRenderTargetView EQU 0A0h
+VTBL_ID3D12Device_CreateDepthStencilView EQU 0A8h
+VTBL_ID3D12Device_CreateSampler EQU 0B0h
+VTBL_ID3D12Device_CopyDescriptors EQU 0B8h
+VTBL_ID3D12Device_CopyDescriptorsSimple EQU 0C0h
+VTBL_ID3D12Device_GetResourceAllocationInfo EQU 0C8h
+VTBL_ID3D12Device_GetCustomHeapProperties EQU 0D0h
+VTBL_ID3D12Device_CreateCommittedResource EQU 0D8h
+VTBL_ID3D12Device_CreateHeap EQU 0E0h
+VTBL_ID3D12Device_CreatePlacedResource EQU 0E8h
+VTBL_ID3D12Device_CreateReservedResource EQU 0F0h
+VTBL_ID3D12Device_CreateSharedHandle EQU 0F8h
+VTBL_ID3D12Device_OpenSharedHandle EQU 100h
+VTBL_ID3D12Device_OpenSharedHandleByName EQU 108h
+VTBL_ID3D12Device_MakeResident EQU 110h
+VTBL_ID3D12Device_Evict EQU 118h
+VTBL_ID3D12Device_CreateFence EQU 120h
+VTBL_ID3D12Device_GetDeviceRemovedReason EQU 128h
+VTBL_ID3D12Device_GetCopyableFootprints EQU 130h
+VTBL_ID3D12Device_CreateQueryHeap EQU 138h
+VTBL_ID3D12Device_SetStablePowerState EQU 140h
+VTBL_ID3D12Device_CreateCommandSignature EQU 148h
+VTBL_ID3D12Device_GetResourceTiling EQU 150h
+VTBL_ID3D12Device_GetAdapterLuid EQU 158h
