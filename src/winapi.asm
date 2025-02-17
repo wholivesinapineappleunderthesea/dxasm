@@ -83,6 +83,7 @@ local_heapHandle QWORD 0
 local_dxFactory QWORD 0
 local_dxAdapter QWORD 0
 local_dxDevice QWORD 0
+local_dxCommandQueue QWORD 0
 
 .CONST
 
@@ -337,8 +338,8 @@ winDestroyWindow ENDP
 ;
 
 winDX12Init PROC
-	sub rsp, 38h
-	mov dword ptr [rsp+028h], 0 ; adapter index
+	sub rsp, 88h
+	mov dword ptr [rsp+08h], 0 ; adapter index
 
 
 
@@ -394,13 +395,39 @@ _enum_adapter1_device_success:
 
 _success_created3d12device:
 
-	add rsp, 38h
+	lea rdx, [rsp + 028h]
+	mov dword ptr [rdx], 0 ; Type : D3D12_COMMAND_LIST_TYPE_DIRECT
+	mov dword ptr [rdx + 4], 0 ; Priority
+	mov dword ptr [rdx + 8], 0 ; Flags : D3D12_COMMAND_QUEUE_FLAG_NONE
+	mov dword ptr [rdx + 0Ch], 0 ; NodeMask
+
+	mov rcx, local_dxDevice
+	mov rax, qword ptr [rcx]
+
+	lea r8, IID_ID3D12CommandQueue
+	lea r9, local_dxCommandQueue
+	call qword ptr [rax + VTBL_ID3D12Device_CreateCommandQueue]
+	test eax, eax
+	jns _success_created3d12commandqueue
+	int 3
+
+_success_created3d12commandqueue:
+
+
+
+
+	add rsp, 88h
 	ret
 winDX12Init ENDP
 
 winDX12Exit PROC
 	sub rsp, 28h
 
+	mov rcx, local_dxCommandQueue
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxCommandQueue, 0
+	
 	mov rcx, local_dxDevice
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]

@@ -85,3 +85,28 @@ VTBL_ID3D12Device_SetStablePowerState EQU 140h
 VTBL_ID3D12Device_CreateCommandSignature EQU 148h
 VTBL_ID3D12Device_GetResourceTiling EQU 150h
 VTBL_ID3D12Device_GetAdapterLuid EQU 158h
+
+; ID3D12DeviceChild : ID3D12Object
+; MIDL_INTERFACE("905db94b-a00c-4140-9df5-2b64ca9ea357")
+EXTERN IID_ID3D12DeviceChild:BYTE
+VTBL_ID3D12DeviceChild_GetDevice EQU 038h
+    
+
+; ID3D12Pageable : ID3D12DeviceChild
+; MIDL_INTERFACE("63ee58fb-1268-4835-86da-f008ce62f0d6")
+EXTERN IID_ID3D12Pageable:BYTE
+
+; ID3D12CommandQueue : ID3D12Pageable
+; MIDL_INTERFACE("0ec870a6-5d7e-4c22-8cfc-5baae07616ed")
+EXTERN IID_ID3D12CommandQueue:BYTE
+VTBL_ID3D12CommandQueue_UpdateTileMappings EQU 040h
+VTBL_ID3D12CommandQueue_CopyTileMappings EQU 048h
+VTBL_ID3D12CommandQueue_ExecuteCommandLists EQU 050h
+VTBL_ID3D12CommandQueue_SetMarker EQU 058h
+VTBL_ID3D12CommandQueue_BeginEvent EQU 060h
+VTBL_ID3D12CommandQueue_EndEvent EQU 068h
+VTBL_ID3D12CommandQueue_Signal EQU 070h
+VTBL_ID3D12CommandQueue_Wait EQU 078h
+VTBL_ID3D12CommandQueue_GetTimestampFrequency EQU 080h
+VTBL_ID3D12CommandQueue_GetClockCalibration EQU 088h
+VTBL_ID3D12CommandQueue_GetDesc EQU 090h
