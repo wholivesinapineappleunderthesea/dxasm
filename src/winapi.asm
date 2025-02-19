@@ -93,6 +93,8 @@ local_dxAdapter QWORD 0
 local_dxDevice QWORD 0
 local_dxCommandQueue QWORD 0
 local_dxSwapChain QWORD 0
+local_dxRTVDescriptorHeap QWORD 0
+local_dxRTVDescriptorHandleIncrementSize DWORD 0
 
 .CONST
 
@@ -458,6 +460,33 @@ _success_created3d12commandqueue:
 
 _success_createdxgiswapchain:
 
+	mov rcx, local_dxFactory
+	mov rdx, global_windowHandle
+	mov r8d, 2 ; DXGI_MWA_NO_ALT_ENTER
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IDXGIFactory_MakeWindowAssociation]
+
+	lea rdx, [rsp + 028h]
+	mov dword ptr [rdx], 2 ; D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+	mov dword ptr [rdx + 4], 2 ; NumDescriptors
+	mov dword ptr [rdx + 8], 0 ; Flags
+	mov dword ptr [rdx + 0Ch], 0 ; NodeMask
+	mov rcx, local_dxDevice
+	lea r8, IID_ID3D12DescriptorHeap
+	lea r9, local_dxRTVDescriptorHeap
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateDescriptorHeap]
+	test eax, eax
+	jns _success_created3d12descriptorheap
+	int 3
+
+	_success_created3d12descriptorheap:
+
+	mov rcx, local_dxDevice
+	mov edx, 2 ; D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_GetDescriptorHandleIncrementSize]
+	mov local_dxRTVDescriptorHandleIncrementSize, eax
 
 
 
@@ -467,6 +496,11 @@ winDX12Init ENDP
 
 winDX12Exit PROC
 	sub rsp, 28h
+
+	mov rcx, local_dxRTVDescriptorHeap
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxRTVDescriptorHeap, 0
 
 	mov rcx, local_dxCommandQueue
 	mov rax, qword ptr [rcx]

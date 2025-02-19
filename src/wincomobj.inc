@@ -110,3 +110,10 @@ VTBL_ID3D12CommandQueue_Wait EQU 078h
 VTBL_ID3D12CommandQueue_GetTimestampFrequency EQU 080h
 VTBL_ID3D12CommandQueue_GetClockCalibration EQU 088h
 VTBL_ID3D12CommandQueue_GetDesc EQU 090h
+
+; ID3D12DescriptorHeap : ID3D12Pageable
+; MIDL_INTERFACE("8efb471d-616c-4f49-90f7-127bb763fa51")
+EXTERN IID_ID3D12DescriptorHeap:BYTE
+VTBL_ID3D12DescriptorHeap_GetDesc EQU 040h
+VTBL_ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart EQU 048h
+VTBL_ID3D12DescriptorHeap_GetGPUDescriptorHandleForHeapStart EQU 050h
