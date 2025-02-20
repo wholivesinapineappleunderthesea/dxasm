@@ -92,6 +92,8 @@ local_dxFactory QWORD 0
 local_dxAdapter QWORD 0
 local_dxDevice QWORD 0
 local_dxCommandQueue QWORD 0
+local_dxCommandAllocator QWORD 0
+local_dxCommandList QWORD 0
 local_dxSwapChain QWORD 0
 local_dxRTVDescriptorHeap QWORD 0
 local_dxRTVDescriptorHandleIncrementSize DWORD 0
@@ -427,6 +429,35 @@ _success_created3d12device:
 	int 3
 
 _success_created3d12commandqueue:
+	
+	mov rcx, local_dxDevice
+	xor edx, edx ; D3D12_COMMAND_LIST_TYPE_DIRECT
+	lea r8, IID_ID3D12CommandAllocator
+	lea r9, local_dxCommandAllocator
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateCommandAllocator]
+	test eax, eax
+	jns _success_created3d12commandalloc
+	int 3
+
+_success_created3d12commandalloc:
+
+	mov rcx, local_dxDevice
+	xor edx, edx ; NodeMask
+	xor r8d, r8d ; D3D12_COMMAND_LIST_TYPE_DIRECT
+	mov r9, local_dxCommandAllocator
+	mov qword ptr [rsp + 020h], 0 ; pInitialState
+	lea rax, IID_ID3D12GraphicsCommandList
+	mov qword ptr [rsp + 028h], rax ; riid
+	lea rax, local_dxCommandList
+	mov qword ptr [rsp + 030h], rax ; ppCommandList
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateCommandList]
+	test eax, eax
+	jns _success_created3d12commandlist
+	int 3
+
+_success_created3d12commandlist:
 
 	lea r8, [rsp + 028h]
 	mov eax, local_windowRect.right
@@ -480,7 +511,7 @@ _success_createdxgiswapchain:
 	jns _success_created3d12descriptorheap
 	int 3
 
-	_success_created3d12descriptorheap:
+_success_created3d12descriptorheap:
 
 	mov rcx, local_dxDevice
 	mov edx, 2 ; D3D12_DESCRIPTOR_HEAP_TYPE_RTV
@@ -502,6 +533,16 @@ winDX12Exit PROC
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxRTVDescriptorHeap, 0
 
+	mov rcx, local_dxCommandAllocator
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxCommandAllocator, 0
+
+	mov rcx, local_dxCommandList
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxCommandList, 0
+			 
 	mov rcx, local_dxCommandQueue
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
