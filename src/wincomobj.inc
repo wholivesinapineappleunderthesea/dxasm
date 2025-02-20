@@ -176,7 +176,12 @@ VTBL_ID3D12GraphicsCommandList_BeginEvent EQU 1C8h
 VTBL_ID3D12GraphicsCommandList_EndEvent EQU 1D0h
 VTBL_ID3D12GraphicsCommandList_ExecuteIndirect EQU 1D8h
 
-
+; ID3D12Fence : ID3D12Pageable
+; MIDL_INTERFACE("0a753dcf-c4d8-4b91-adf6-be5a60d95a76")
+EXTERN IID_ID3D12Fence:BYTE
+VTBL_ID3D12Fence_GetCompletedValue EQU 040h
+VTBL_ID3D12Fence_SetEventOnCompletion EQU 048h
+VTBL_ID3D12Fence_Signal EQU 050h
 
 
 

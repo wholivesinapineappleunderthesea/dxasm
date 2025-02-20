@@ -25,6 +25,8 @@ EXTERN PostQuitMessage: PROC
 EXTERN CreateDXGIFactory1:PROC
 EXTERN D3D12CreateDevice:PROC
 
+EXTERN CreateEventW:PROC
+
 
 
 POINT STRUCT
@@ -94,6 +96,8 @@ local_dxDevice QWORD 0
 local_dxCommandQueue QWORD 0
 local_dxCommandAllocator QWORD 0
 local_dxCommandList QWORD 0
+local_dxFence QWORD 0
+local_fenceEventHandle QWORD 0
 local_dxSwapChain QWORD 0
 local_dxRTVDescriptorHeap QWORD 0
 local_dxRTVDescriptorHandleIncrementSize DWORD 0
@@ -459,6 +463,32 @@ _success_created3d12commandalloc:
 
 _success_created3d12commandlist:
 
+	mov rcx, local_dxCommandList
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_Close]
+
+	mov rcx, local_dxDevice
+	xor edx, edx ; InitialValue
+	xor r8d, r8d ; FenceFlags : D3D12_FENCE_FLAG_NONE
+	lea r9, IID_ID3D12Fence
+	lea rax, local_dxFence
+	mov qword ptr [rsp + 020h], rax ; ppFence
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateFence]
+	test eax, eax
+	jns _success_created3d12fence
+	int 3
+
+_success_created3d12fence:
+
+	xor ecx, ecx ; lpEventAttributes
+	xor edx, edx ; bManualReset
+	xor r8d, r8d ; bInitialState
+	xor r9d, r9d ; lpName
+	call CreateEventW
+	mov local_fenceEventHandle, rax
+	
+
 	lea r8, [rsp + 028h]
 	mov eax, local_windowRect.right
 	sub eax, local_windowRect.left
@@ -533,15 +563,22 @@ winDX12Exit PROC
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxRTVDescriptorHeap, 0
 
-	mov rcx, local_dxCommandAllocator
+	mov rcx, local_dxFence
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
-	mov local_dxCommandAllocator, 0
+	mov local_dxFence, 0
 
 	mov rcx, local_dxCommandList
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxCommandList, 0
+
+	mov rcx, local_dxCommandAllocator
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxCommandAllocator, 0
+
+	
 			 
 	mov rcx, local_dxCommandQueue
 	mov rax, qword ptr [rcx]
