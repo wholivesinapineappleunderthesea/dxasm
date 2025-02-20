@@ -26,6 +26,7 @@ EXTERN CreateDXGIFactory1:PROC
 EXTERN D3D12CreateDevice:PROC
 
 EXTERN CreateEventW:PROC
+EXTERN WaitForSingleObject:PROC
 
 
 
@@ -98,6 +99,7 @@ local_dxCommandAllocator QWORD 0
 local_dxCommandList QWORD 0
 local_dxFence QWORD 0
 local_fenceEventHandle QWORD 0
+local_dxFenceValue DWORD 0
 local_dxSwapChain QWORD 0
 local_dxRTVDescriptorHeap QWORD 0
 local_dxRTVDescriptorHandleIncrementSize QWORD 0
@@ -346,6 +348,8 @@ _continue_window:
 	;
 	; frame stuff here i guess
 	;
+
+	call winDX12Frame
 
 	call winDispatchMessageQueue
 	test al, al
@@ -605,6 +609,120 @@ _success_created3d12descriptorheap:
 	add rsp, 80h
 	ret
 winDX12Init ENDP
+
+winDX12Frame PROC
+	sub rsp, 48h
+
+	mov rcx, local_dxCommandAllocator
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12CommandAllocator_Reset]
+
+	mov rcx, local_dxCommandList
+	mov rdx, local_dxCommandAllocator
+	xor r8d, r8d ; pInitialState
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_Reset]
+
+	lea r8, [rsp + 28h]
+	mov dword ptr [r8], 0 ; Type : D3D12_RESOURCE_BARRIER_TYPE_TRANSITION
+	mov dword ptr [r8 + 4], 0 ; Flags : D3D12_RESOURCE_BARRIER_FLAG_NONE
+	mov ecx, local_dxBackBufferIndex
+	lea rax, local_dxRTVBuffer0
+	lea rax, [rax + rcx*8]
+	mov rax, qword ptr [rax]
+	mov qword ptr [r8 + 8], rax ; pResource
+	mov dword ptr [r8 + 10h], 0ffffffffh ; Subresource : D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
+	mov dword ptr [r8 + 14h], 0 ; StateBefore : D3D12_RESOURCE_STATE_PRESENT
+	mov dword ptr [r8 + 18h], 4 ; StateAfter : D3D12_RESOURCE_STATE_RENDER_TARGET
+	mov rcx, local_dxCommandList
+	mov edx, 1 ; NumBarriers
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_ResourceBarrier]
+
+
+
+
+
+
+
+
+	lea r8, [rsp + 28h]
+	mov dword ptr [r8], 0 ; Type : D3D12_RESOURCE_BARRIER_TYPE_TRANSITION
+	mov dword ptr [r8 + 4], 0 ; Flags : D3D12_RESOURCE_BARRIER_FLAG_NONE
+	mov ecx, local_dxBackBufferIndex
+	lea rax, local_dxRTVBuffer0
+	lea rax, [rax + rcx*8]
+	mov rax, qword ptr [rax]
+	mov qword ptr [r8 + 8], rax ; pResource
+	mov dword ptr [r8 + 10h], 0ffffffffh ; Subresource
+	mov dword ptr [r8 + 14h], 4 ; StateBefore : D3D12_RESOURCE_STATE_PRESENT
+	mov dword ptr [r8 + 18h], 0 ; StateAfter : D3D12_RESOURCE_STATE_RENDER_TARGET
+	mov rcx, local_dxCommandList
+	mov edx, 1 ; NumBarriers
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_ResourceBarrier]
+
+	mov rcx, local_dxCommandList
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_Close]
+
+	lea r8, [rsp + 28h]
+	mov rax, local_dxCommandList
+	mov qword ptr [r8], rax
+	mov rcx, local_dxCommandQueue
+	mov edx, 1 ; NumCommandLists
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12CommandQueue_ExecuteCommandLists]
+
+	mov rcx, local_dxSwapChain
+	mov rax, qword ptr [rcx]
+	xor edx, edx ; SyncInterval
+	xor r8d, r8d ; Flags
+	call qword ptr [rax + VTBL_IDXGISwapChain_Present]
+
+	call winDX12SyncAndWaitFence
+
+	; flip back buffer index
+	mov eax, local_dxBackBufferIndex
+	xor eax, 1
+	mov local_dxBackBufferIndex, eax
+
+	add rsp, 48h
+	ret
+winDX12Frame ENDP
+
+winDX12SyncAndWaitFence PROC
+	sub rsp, 28h
+	inc local_dxFenceValue
+
+	mov rcx, local_dxCommandQueue
+	mov rdx, local_dxFence
+	mov r8d, local_dxFenceValue
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12CommandQueue_Signal]
+
+	mov rcx, local_dxFence
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Fence_GetCompletedValue]
+	cmp eax, local_dxFenceValue
+	jge _wait_completed
+
+	mov rcx, local_dxFence
+	mov edx, local_dxFenceValue
+	mov r8, local_fenceEventHandle
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Fence_SetEventOnCompletion]
+
+	mov rcx, local_fenceEventHandle
+	mov r8d, 0ffffffffh ; INFINITE
+	call WaitForSingleObject
+
+
+_wait_completed:
+
+	add rsp, 28h
+	ret
+winDX12SyncAndWaitFence ENDP
 
 winDX12Exit PROC
 	sub rsp, 28h
