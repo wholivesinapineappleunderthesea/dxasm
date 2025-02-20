@@ -370,8 +370,7 @@ winDestroyWindow ENDP
 ;
 
 winDX12Init PROC
-	sub rsp, 080h
-	push rsi
+	sub rsp, 088h
 
 	mov dword ptr [rsp+08h], 0 ; adapter index
 
@@ -562,6 +561,19 @@ _success_created3d12descriptorheap:
 	call qword ptr [rax + VTBL_ID3D12Device_GetDescriptorHandleIncrementSize]
 	mov local_dxRTVDescriptorHandleIncrementSize, rax
 
+	call winDX12CreateSwapChainResources
+
+
+	
+	
+	add rsp, 88h
+	ret
+winDX12Init ENDP
+
+winDX12CreateSwapChainResources PROC
+	sub rsp, 30h
+	push rsi
+
 	mov rcx, local_dxRTVDescriptorHeap
 	lea rdx, [rsp + 028h]
 	mov rax, qword ptr [rcx]
@@ -603,12 +615,10 @@ _success_created3d12descriptorheap:
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12Device_CreateRenderTargetView]
 
-
-	
 	pop rsi
-	add rsp, 80h
+	add rsp, 30h
 	ret
-winDX12Init ENDP
+winDX12CreateSwapChainResources ENDP
 
 winDX12Frame PROC
 	sub rsp, 48h
@@ -724,7 +734,7 @@ _wait_completed:
 	ret
 winDX12SyncAndWaitFence ENDP
 
-winDX12Exit PROC
+winDX12ReleaseSwapChainResources PROC
 	sub rsp, 28h
 
 	mov rcx, local_dxRTVBuffer1
@@ -736,6 +746,13 @@ winDX12Exit PROC
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxRTVBuffer0, 0
+
+	add rsp, 28h
+	ret
+winDX12ReleaseSwapChainResources ENDP
+
+winDX12Exit PROC
+	sub rsp, 28h
 
 	mov rcx, local_dxRTVDescriptorHeap
 	mov rax, qword ptr [rcx]
