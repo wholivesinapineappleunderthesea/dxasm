@@ -37,6 +37,25 @@ VTBLL_IDXGIAdapter_CheckInterfaceSupport EQU 048h
 EXTERN IID_IDXGIAdapter1:BYTE
 VTBL_IDXGIAdapter1_GetDesc1 EQU 050h
 
+; IDXGIDeviceSubObject : IDXGIObject
+; MIDL_INTERFACE("3d3e0379-f9de-4d58-bb6c-18d62992f1a6")
+EXTERN IID_IDXGIDeviceSubObject:BYTE
+VTBL_IDXGIDeviceSubObject_GetDevice EQU 038h
+
+; IDXGISwapChain : IDXGIDeviceSubObject
+; MIDL_INTERFACE("310d36a0-d2e7-4c0a-aa04-6a9d23b8886a")
+EXTERN IID_IDXGISwapChain:BYTE
+VTBL_IDXGISwapChain_Present EQU 040h
+VTBL_IDXGISwapChain_GetBuffer EQU 048h
+VTBL_IDXGISwapChain_SetFullscreenState EQU 050h
+VTBL_IDXGISwapChain_GetFullscreenState EQU 058h
+VTBL_IDXGISwapChain_GetDesc EQU 060h
+VTBL_IDXGISwapChain_ResizeBuffers EQU 068h
+VTBL_IDXGISwapChain_ResizeTarget EQU 070h
+VTBL_IDXGISwapChain_GetContainingOutput EQU 078h
+VTBL_IDXGISwapChain_GetFrameStatistics EQU 080h
+VTBL_IDXGISwapChain_GetLastPresentCount EQU 088h
+
 ; ID3D12Object : IUnknown
 ; MIDL_INTERFACE("c4fec28f-7966-4e95-9f94-f431cb56c3b8")
 EXTERN IID_ID3D12Device:BYTE
@@ -183,7 +202,16 @@ VTBL_ID3D12Fence_GetCompletedValue EQU 040h
 VTBL_ID3D12Fence_SetEventOnCompletion EQU 048h
 VTBL_ID3D12Fence_Signal EQU 050h
 
-
+; ID3D12Resource : ID3D12Pageable
+; MIDL_INTERFACE("696442be-a72e-4059-bc79-5b5c98040fad")
+EXTERN IID_ID3D12Resource:BYTE
+VTBL_ID3D12Resource_Map EQU 040h
+VTBL_ID3D12Resource_Unmap EQU 048h
+VTBL_ID3D12Resource_GetDesc EQU 050h
+VTBL_ID3D12Resource_GetGPUVirtualAddress EQU 058h
+VTBL_ID3D12Resource_WriteToSubresource EQU 060h
+VTBL_ID3D12Resource_ReadFromSubresource EQU 068h
+VTBL_ID3D12Resource_GetHeapProperties EQU 070h
 
 ; ID3D12DescriptorHeap : ID3D12Pageable
 ; MIDL_INTERFACE("8efb471d-616c-4f49-90f7-127bb763fa51")

@@ -100,7 +100,14 @@ local_dxFence QWORD 0
 local_fenceEventHandle QWORD 0
 local_dxSwapChain QWORD 0
 local_dxRTVDescriptorHeap QWORD 0
-local_dxRTVDescriptorHandleIncrementSize DWORD 0
+local_dxRTVDescriptorHandleIncrementSize QWORD 0
+local_dxRTVHandle0 QWORD 0
+local_dxRTVHandle1 QWORD 0
+local_dxRTVBuffer0 QWORD 0
+local_dxRTVBuffer1 QWORD 0
+
+
+local_dxBackBufferIndex DWORD 0 
 
 .CONST
 
@@ -359,7 +366,9 @@ winDestroyWindow ENDP
 ;
 
 winDX12Init PROC
-	sub rsp, 88h
+	sub rsp, 080h
+	push rsi
+
 	mov dword ptr [rsp+08h], 0 ; adapter index
 
 
@@ -547,16 +556,68 @@ _success_created3d12descriptorheap:
 	mov edx, 2 ; D3D12_DESCRIPTOR_HEAP_TYPE_RTV
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12Device_GetDescriptorHandleIncrementSize]
-	mov local_dxRTVDescriptorHandleIncrementSize, eax
+	mov local_dxRTVDescriptorHandleIncrementSize, rax
+
+	mov rcx, local_dxRTVDescriptorHeap
+	lea rdx, [rsp + 028h]
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart]
+	mov rsi, qword ptr [rsp + 028h]
+
+	; buffer 0
+
+	mov rcx, local_dxSwapChain
+	xor edx, edx ; Buffer
+	lea r8, IID_ID3D12Resource
+	lea r9, local_dxRTVBuffer0
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IDXGISwapChain_GetBuffer]
+
+	mov local_dxRTVHandle0, rsi
+	mov rcx, local_dxDevice
+	mov rdx, local_dxRTVBuffer0 ; pResource
+	xor r8d, r8d ; pDesc
+	mov r9, rsi ; DestDescriptor
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateRenderTargetView]
+	
+	; buffer 1
+
+	mov rcx, local_dxSwapChain
+	mov edx, 1 ; Buffer
+	lea r8, IID_ID3D12Resource
+	lea r9, local_dxRTVBuffer1
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IDXGISwapChain_GetBuffer]
+
+	add rsi, local_dxRTVDescriptorHandleIncrementSize
+	mov local_dxRTVHandle1, rsi
+	mov rcx, local_dxDevice
+	mov rdx, local_dxRTVBuffer1 ; pResource
+	xor r8d, r8d ; pDesc
+	mov r9, rsi ; DestDescriptor
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateRenderTargetView]
 
 
-
-	add rsp, 88h
+	
+	pop rsi
+	add rsp, 80h
 	ret
 winDX12Init ENDP
 
 winDX12Exit PROC
 	sub rsp, 28h
+
+	mov rcx, local_dxRTVBuffer1
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxRTVBuffer1, 0
+
+	mov rcx, local_dxRTVBuffer0
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxRTVBuffer0, 0
 
 	mov rcx, local_dxRTVDescriptorHeap
 	mov rax, qword ptr [rcx]
