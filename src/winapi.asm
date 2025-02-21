@@ -116,6 +116,8 @@ local_dxBackBufferIndex DWORD 0
 local_windowClassName WORD 'd','x','a','s','m',0
 local_windowTitle WORD 'D','X','A','S','M',0
 
+local_clearColour REAL4 0.0, 0.2, 0.4, 1.0
+
 .CODE
 
 winInit PROC
@@ -649,7 +651,16 @@ winDX12Frame PROC
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_ResourceBarrier]
 
-
+	mov ecx, local_dxBackBufferIndex
+	lea rax, local_dxRTVHandle0
+	lea rax, [rax + rcx*8]
+	mov rcx, local_dxCommandList
+	mov rdx, qword ptr [rax]
+	lea r8, local_clearColour
+	xor r9d, r9d ; NumRects
+	mov qword ptr [rsp+020h], 0 ; pRects
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_ClearRenderTargetView]
 
 
 
