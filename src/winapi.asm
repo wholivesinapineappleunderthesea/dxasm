@@ -28,6 +28,7 @@ EXTERN D3D12CreateDevice:PROC
 EXTERN CreateEventW:PROC
 EXTERN WaitForSingleObject:PROC
 
+MM_SHARED_USER_DATA_VA EQU 07FFE0000h 
 
 
 POINT STRUCT
@@ -111,6 +112,8 @@ local_dxRTVBuffer1 QWORD 0
 
 local_dxBackBufferIndex DWORD 0 
 
+local_lastFrameTime QWORD 0
+
 .CONST
 
 local_windowClassName WORD 'd','x','a','s','m',0
@@ -118,7 +121,32 @@ local_windowTitle WORD 'D','X','A','S','M',0
 
 local_clearColour REAL4 0.0, 0.2, 0.4, 1.0
 
+; 10000000.0
+local_interruptFrequency REAL8 10000000.0, 10000000.0
+
 .CODE
+
+winHighPrecisionTime PROC
+	
+_modified:
+	mov eax, dword ptr [MM_SHARED_USER_DATA_VA + 0320h + 4h] ; High1Time
+	mov ecx, dword ptr [MM_SHARED_USER_DATA_VA + 0320h + 0h] ; LowPart
+	mov edx, dword ptr [MM_SHARED_USER_DATA_VA + 0320h + 8h] ; High2Time
+	cmp edx, eax
+	jne _modified
+
+	shl rax, 32
+	or rax, rcx
+
+	ret
+winHighPrecisionTime ENDP
+
+winHighPrecisionTimeToSeconds PROC
+	cvtsi2sd xmm0, rcx
+	movq xmm1, local_interruptFrequency
+	divsd xmm0, xmm1
+	ret
+winHighPrecisionTimeToSeconds ENDP
 
 winInit PROC
 	sub rsp, 28h
@@ -163,6 +191,9 @@ _cont_walk_backslash:
 
 	call GetProcessHeap
 	mov local_heapHandle, rax
+
+	call winHighPrecisionTime
+	mov local_lastFrameTime, rax
 
 	add rsp, 28h
 	ret
@@ -623,7 +654,11 @@ winDX12CreateSwapChainResources PROC
 winDX12CreateSwapChainResources ENDP
 
 winDX12Frame PROC
-	sub rsp, 48h
+	sub rsp, 50h
+	push rsi
+
+	call winHighPrecisionTime
+	mov rsi, rax
 
 	mov rcx, local_dxCommandAllocator
 	mov rax, qword ptr [rcx]
@@ -656,7 +691,9 @@ winDX12Frame PROC
 	lea rax, [rax + rcx*8]
 	mov rcx, local_dxCommandList
 	mov rdx, qword ptr [rax]
+	
 	lea r8, local_clearColour
+
 	xor r9d, r9d ; NumRects
 	mov qword ptr [rsp+020h], 0 ; pRects
 	mov rax, qword ptr [rcx]
@@ -708,7 +745,10 @@ winDX12Frame PROC
 	xor eax, 1
 	mov local_dxBackBufferIndex, eax
 
-	add rsp, 48h
+	mov local_lastFrameTime, rsi
+
+	pop rsi
+	add rsp, 50h
 	ret
 winDX12Frame ENDP
 
