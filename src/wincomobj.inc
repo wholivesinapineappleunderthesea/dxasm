@@ -226,3 +226,6 @@ VTBL_ID3D12DescriptorHeap_GetDesc EQU 040h
 VTBL_ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart EQU 048h
 VTBL_ID3D12DescriptorHeap_GetGPUDescriptorHandleForHeapStart EQU 050h
 
+; ID3D12RootSignature : public ID3D12DeviceChild
+; MIDL_INTERFACE("c54a6b66-72df-4ee8-8be5-a946a1429214")
+EXTERN IID_ID3D12RootSignature:BYTE

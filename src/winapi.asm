@@ -24,6 +24,7 @@ EXTERN PostQuitMessage: PROC
 
 EXTERN CreateDXGIFactory1:PROC
 EXTERN D3D12CreateDevice:PROC
+EXTERN D3D12SerializeRootSignature:PROC
 
 EXTERN CreateEventW:PROC
 EXTERN WaitForSingleObject:PROC
@@ -108,6 +109,7 @@ local_dxRTVHandle0 QWORD 0
 local_dxRTVHandle1 QWORD 0
 local_dxRTVBuffer0 QWORD 0
 local_dxRTVBuffer1 QWORD 0
+local_dxRootSignature QWORD 0
 
 
 local_dxBackBufferIndex DWORD 0 
@@ -596,7 +598,46 @@ _success_created3d12descriptorheap:
 
 	call winDX12CreateSwapChainResources
 
+	lea rcx, [rsp + 028h] ; D3D12_ROOT_SIGNATURE_DESC
+	mov dword ptr [rcx + 0h], 0 ; NumParameters
+	mov qword ptr [rcx + 8h], 0 ; pParameters
+	mov dword ptr [rcx + 10h], 0 ; NumStaticSamplers
+	mov qword ptr [rcx + 18h], 0 ; pStaticSamplers
+	mov dword ptr [rcx + 20h], 1 ; Flags : D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	mov edx, 1 ; D3D_ROOT_SIGNATURE_VERSION_1
+	lea r8, [rsp + 028h + 028h] ; ppBlob
+	mov qword ptr [r8], 0 ; ppErrorBlob
+	xor r9d, r9d ; ppErrorBlob
+	call D3D12SerializeRootSignature
 
+	; get blob ptr
+	mov rcx, qword ptr [rsp + 028h + 028h] ; ppBlob
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D10Blob_GetBufferPointer]
+	; store it into the stack somewhere!
+	mov qword ptr [rsp + 028h + 030h], rax
+
+	; likewise length
+	mov rcx, qword ptr [rsp + 028h + 028h] ; ppBlob
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D10Blob_GetBufferSize]
+	mov qword ptr [rsp + 028h + 038h], rax
+
+	mov rcx, local_dxDevice
+	xor edx, edx ; NodeMask
+	mov r8, qword ptr [rsp + 028h + 030h] ; pShaderBytecode
+	mov r9, qword ptr [rsp + 028h + 038h] ; BytecodeLength
+	lea rax, IID_ID3D12RootSignature
+	mov qword ptr [rsp + 020h], rax ; riid
+	lea rax, local_dxRootSignature
+	mov qword ptr [rsp + 028h], rax ; ppRootSignature
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateRootSignature]
+
+	; gotta release the blob
+	mov rcx, qword ptr [rsp + 028h + 028h] ; ppBlob
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
 	
 	
 	add rsp, 88h
@@ -804,6 +845,13 @@ winDX12ReleaseSwapChainResources ENDP
 
 winDX12Exit PROC
 	sub rsp, 28h
+
+	call winDX12ReleaseSwapChainResources
+
+	mov rcx, local_dxRootSignature
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxRootSignature, 0
 
 	mov rcx, local_dxRTVDescriptorHeap
 	mov rax, qword ptr [rcx]
