@@ -49,6 +49,10 @@ for binfilepath in binfilepaths:
 			if j < min(i+16, len(binbytes)) - 1:
 				asmfile.write(", ")
 		asmfile.write("\n")
+
+	# generate PUBLIC directive
+	# PUBLIC binfilename
+	asmfile.write("PUBLIC " + binfilename + "\n")
 	
 	binfile.close()
 

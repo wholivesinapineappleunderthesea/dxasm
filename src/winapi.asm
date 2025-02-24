@@ -1,5 +1,6 @@
 INCLUDE masm_macros.inc
 INCLUDE wincomobj.inc
+INCLUDE resrc.inc
 
 EXTERN GetProcAddress: PROC
 EXTERN GetModuleHandleW: PROC
@@ -22,6 +23,7 @@ EXTERN TranslateMessage: PROC
 EXTERN DispatchMessageW: PROC
 EXTERN PostQuitMessage: PROC
 
+EXTERN D3D12GetDebugInterface:PROC
 EXTERN CreateDXGIFactory1:PROC
 EXTERN D3D12CreateDevice:PROC
 EXTERN D3D12SerializeRootSignature:PROC
@@ -93,6 +95,7 @@ local_windowRect RECT <>
 
 local_heapHandle QWORD 0
 
+local_dxDebug QWORD 0
 local_dxFactory QWORD 0
 local_dxAdapter QWORD 0
 local_dxDevice QWORD 0
@@ -110,6 +113,7 @@ local_dxRTVHandle1 QWORD 0
 local_dxRTVBuffer0 QWORD 0
 local_dxRTVBuffer1 QWORD 0
 local_dxRootSignature QWORD 0
+local_dxDefault3DPipelineState QWORD 0
 
 
 local_dxBackBufferIndex DWORD 0 
@@ -122,6 +126,12 @@ local_windowClassName WORD 'd','x','a','s','m',0
 local_windowTitle WORD 'D','X','A','S','M',0
 
 local_clearColour REAL4 0.0, 0.2, 0.4, 1.0
+
+local_semanticPosition BYTE 'POSITION', 0
+local_semanticTexcoord BYTE 'TEXCOORD', 0
+local_semanticNormal BYTE 'NORMAL', 0
+local_semanticTanget BYTE 'TANGENT', 0
+
 
 ; 10000000.0
 local_interruptFrequency REAL8 10000000.0, 10000000.0
@@ -407,6 +417,14 @@ winDestroyWindow ENDP
 winDX12Init PROC
 	sub rsp, 088h
 
+	lea rcx, IID_ID3D12Debug
+	lea rdx, local_dxDebug
+	call D3D12GetDebugInterface
+
+	mov rcx, local_dxDebug
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Debug_EnableDebugLayer]
+
 	mov dword ptr [rsp+08h], 0 ; adapter index
 
 
@@ -639,10 +657,167 @@ _success_created3d12descriptorheap:
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	
+	call winDX12CreatePipelineStates
 	
 	add rsp, 88h
 	ret
 winDX12Init ENDP
+
+winDX12CreatePipelineStates PROC
+	; float3 pos : POSITION;
+	; float2 uv : TEXCOORD;
+	; float3 normal : NORMAL;
+	; float3 tangent : TANGENT;
+	; rsp + 28h : D3D12_INPUT_ELEMENT_DESC[4]
+	; rsp + 28h + (20h*4) : D3D12_GRAPHICS_PIPELINE_STATE_DESC
+	sub rsp, (28h + (20h*4) + 290h)
+
+	; POSITION
+	lea rcx, local_semanticPosition
+	mov qword ptr [rsp + 28h + 0h], rcx ; SemanticName
+	mov dword ptr [rsp + 28h + 8h], 0 ; SemanticIndex
+	mov dword ptr [rsp + 28h + 0Ch], 6 ; Format : DXGI_FORMAT_R32G32B32_FLOAT
+	mov dword ptr [rsp + 28h + 10h], 0 ; InputSlot
+	mov dword ptr [rsp + 28h + 14h], 0 ; AlignedByteOffset
+	mov dword ptr [rsp + 28h + 18h], 0 ; InputSlotClass : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
+	mov dword ptr [rsp + 28h + 1Ch], 0 ; InstanceDataStepRate
+
+	; TEXCOORD
+	lea rcx, local_semanticTexcoord
+	mov qword ptr [rsp + 28h + 20h], rcx ; SemanticName
+	mov dword ptr [rsp + 28h + 28h], 0 ; SemanticIndex
+	mov dword ptr [rsp + 28h + 2Ch], 16 ; Format : DXGI_FORMAT_R32G32_FLOAT
+	mov dword ptr [rsp + 28h + 30h], 0 ; InputSlot
+	mov dword ptr [rsp + 28h + 34h], 12 ; AlignedByteOffset
+	mov dword ptr [rsp + 28h + 38h], 0 ; InputSlotClass : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
+	mov dword ptr [rsp + 28h + 3Ch], 0 ; InstanceDataStepRate
+
+	; NORMAL
+	lea rcx, local_semanticNormal
+	mov qword ptr [rsp + 28h + 40h], rcx ; SemanticName
+	mov dword ptr [rsp + 28h + 48h], 0 ; SemanticIndex
+	mov dword ptr [rsp + 28h + 4Ch], 6 ; Format : DXGI_FORMAT_R32G32B32_FLOAT
+	mov dword ptr [rsp + 28h + 50h], 0 ; InputSlot
+	mov dword ptr [rsp + 28h + 54h], 20 ; AlignedByteOffset
+	mov dword ptr [rsp + 28h + 58h], 0 ; InputSlotClass : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
+	mov dword ptr [rsp + 28h + 5Ch], 0 ; InstanceDataStepRate
+
+	; TANGENT
+	lea rcx, local_semanticTanget
+	mov qword ptr [rsp + 28h + 60h], rcx ; SemanticName
+	mov dword ptr [rsp + 28h + 68h], 0 ; SemanticIndex
+	mov dword ptr [rsp + 28h + 6Ch], 6 ; Format : DXGI_FORMAT_R32G32B32_FLOAT
+	mov dword ptr [rsp + 28h + 70h], 0 ; InputSlot
+	mov dword ptr [rsp + 28h + 74h], 32 ; AlignedByteOffset
+	mov dword ptr [rsp + 28h + 78h], 0 ; InputSlotClass : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
+	mov dword ptr [rsp + 28h + 7Ch], 0 ; InstanceDataStepRate
+
+	mov rax, local_dxRootSignature
+	mov qword ptr [rsp + 28h + (20h*4)], rax ; pRootSignature
+	lea rax, resrc__shader__def_vs_bin
+	mov qword ptr [rsp + 28h + (20h*4) + 8h], rax ; VS.pShaderBytecode
+	mov qword ptr [rsp + 28h + (20h*4) + 10h], resrc__shader__def_vs_bin_SIZE ; VS.pShaderBytecodeLength
+	lea rax, resrc__shader__def_ps_bin
+	mov qword ptr [rsp + 28h + (20h*4) + 18h], rax ; PS.pShaderBytecode
+	mov qword ptr [rsp + 28h + (20h*4) + 20h], resrc__shader__def_ps_bin_SIZE ; PS.pShaderBytecodeLength
+	mov qword ptr [rsp + 28h + (20h*4) + 28h], 0 ; DS.pShaderBytecode
+	mov qword ptr [rsp + 28h + (20h*4) + 30h], 0 ; DS.pShaderBytecodeLength
+	mov qword ptr [rsp + 28h + (20h*4) + 38h], 0 ; HS.pShaderBytecode
+	mov qword ptr [rsp + 28h + (20h*4) + 40h], 0 ; HS.pShaderBytecodeLength
+	mov qword ptr [rsp + 28h + (20h*4) + 48h], 0 ; GS.pShaderBytecode
+	mov qword ptr [rsp + 28h + (20h*4) + 50h], 0 ; GS.pShaderBytecodeLength
+	mov qword ptr [rsp + 28h + (20h*4) + 58h], 0 ; StreamOutput.pSODeclaration
+	mov qword ptr [rsp + 28h + (20h*4) + 58h + 8h], 0 ; StreamOutput.NumEntries
+	mov qword ptr [rsp + 28h + (20h*4) + 58h + 10h], 0 ; StreamOutput.pBufferStrides
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 18h], 0 ; StreamOutput.NumStrides
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 1Ch], 0 ; StreamOutput.RasterizedStream
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h], 0 ; BlendState.AlphaToCoverageEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 4h], 0 ; BlendState.IndependentBlendEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h], 1 ; BlendState.RenderTarget[0].BlendEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 4h], 0 ; BlendState.RenderTarget[0].LogicOpEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 8h], 5 ; BlendState.RenderTarget[0].SrcBlend : D3D12_BLEND_SRC_ALPHA
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 0Ch], 6 ; BlendState.RenderTarget[0].DestBlend : D3D12_BLEND_INV_SRC_ALPHA
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 10h], 1 ; BlendState.RenderTarget[0].BlendOp : D3D12_BLEND_OP_ADD
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 14h], 2 ; BlendState.RenderTarget[0].SrcBlendAlpha : D3D12_BLEND_ONE
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 18h], 1 ; BlendState.RenderTarget[0].DestBlendAlpha : D3D12_BLEND_ZERO
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 1Ch], 1 ; BlendState.RenderTarget[0].BlendOpAlpha : D3D12_BLEND_OP_ADD
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 20h], 15 ; BlendState.RenderTarget[0].RenderTargetWriteMask : D3D12_COLOR_WRITE_ENABLE_ALL
+
+	mov dword ptr [rsp + 28h + (20h*4) + 01C0h], 0FFFFFFFFh ; SampleMask
+
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h], 3 ; RasterizerState.FillMode : D3D12_FILL_MODE_SOLID
+	;; TODO: CULLING BACKFACE:
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 4h], 1 ; RasterizerState.CullMode : D3D12_CULL_MODE_NONE
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 8h], 0 ; RasterizerState.FrontCounterClockwise
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 0Ch], 0 ; RasterizerState.DepthBias : D3D12_DEFAULT_DEPTH_BIAS
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 10h], 0 ; RasterizerState.DepthBiasClamp : D3D12_DEFAULT_DEPTH_BIAS_CLAMP
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 14h], 0 ; RasterizerState.SlopeScaledDepthBias : D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 18h], 1 ; RasterizerState.DepthClipEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 1Ch], 0 ; RasterizerState.MultisampleEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 20h], 0 ; RasterizerState.AntialiasedLineEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 24h], 0 ; RasterizerState.ForcedSampleCount
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 28h], 0 ; RasterizerState.ConservativeRaster : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h], 1 ; DepthStencilState.DepthEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 4h], 1 ; DepthStencilState.DepthWriteMask : D3D12_DEPTH_WRITE_MASK_ALL
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 8h], 4 ; DepthStencilState.DepthFunc : D3D12_COMPARISON_FUNC_LESS
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 0Ch], 0 ; DepthStencilState.StencilEnable
+	mov byte ptr [rsp + 28h + (20h*4) + 01F0h + 10h], 0 ; DepthStencilState.StencilReadMask
+	mov byte ptr [rsp + 28h + (20h*4) + 01F0h + 11h], 0 ; DepthStencilState.StencilWriteMask
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 14h], 1 ; DepthStencilState.FrontFace.StencilFailOp : D3D12_STENCIL_OP_KEEP
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 18h], 1 ; DepthStencilState.FrontFace.StencilDepthFailOp : D3D12_STENCIL_OP_KEEP
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 1Ch], 1 ; DepthStencilState.FrontFace.StencilPassOp : D3D12_STENCIL_OP_KEEP
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 20h], 1 ; DepthStencilState.FrontFace.StencilFunc : D3D12_COMPARISON_FUNC_NEVER
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 24h], 1 ; DepthStencilState.BackFace.StencilFailOp : D3D12_STENCIL_OP_KEEP
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 28h], 1 ; DepthStencilState.BackFace.StencilDepthFailOp : D3D12_STENCIL_OP_KEEP
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 2Ch], 1 ; DepthStencilState.BackFace.StencilPassOp : D3D12_STENCIL_OP_KEEP
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 30h], 1 ; DepthStencilState.BackFace.StencilFunc : D3D12_COMPARISON_FUNC_NEVER
+
+	lea rax, [rsp + 28h]
+	mov qword ptr [rsp + 28h + (20h*4) + 0228h], rax ; InputLayout.pInputElementDescs
+	mov dword ptr [rsp + 28h + (20h*4) + 0230h], 4 ; InputLayout.NumElements
+
+	mov dword ptr [rsp + 28h + (20h*4) + 0238h], 0 ; IBStripCutValue : D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED
+	mov dword ptr [rsp + 28h + (20h*4) + 023Ch], 3 ; PrimitiveTopologyType : D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE
+	mov dword ptr [rsp + 28h + (20h*4) + 0240h], 1 ; NumRenderTargets
+	mov dword ptr [rsp + 28h + (20h*4) + 0244h], 28 ; RTVFormats[0] : DXGI_FORMAT_R8G8B8A8_UNORM
+	mov dword ptr [rsp + 28h + (20h*4) + 0248h], 0 ; RTVFormats[1] : DXGI_FORMAT_UNKNOWN
+	mov dword ptr [rsp + 28h + (20h*4) + 024Ch], 0 ; RTVFormats[2] : DXGI_FORMAT_UNKNOWN
+	mov dword ptr [rsp + 28h + (20h*4) + 0250h], 0 ; RTVFormats[3] : DXGI_FORMAT_UNKNOWN
+	mov dword ptr [rsp + 28h + (20h*4) + 0254h], 0 ; RTVFormats[4] : DXGI_FORMAT_UNKNOWN
+	mov dword ptr [rsp + 28h + (20h*4) + 0258h], 0 ; RTVFormats[5] : DXGI_FORMAT_UNKNOWN
+	mov dword ptr [rsp + 28h + (20h*4) + 025Ch], 0 ; RTVFormats[6] : DXGI_FORMAT_UNKNOWN
+	mov dword ptr [rsp + 28h + (20h*4) + 0260h], 0 ; RTVFormats[7] : DXGI_FORMAT_UNKNOWN
+	mov dword ptr [rsp + 28h + (20h*4) + 0264h], 40 ; DSVFormat : DXGI_FORMAT_D32_FLOAT
+
+	mov dword ptr [rsp + 28h + (20h*4) + 0268h], 1 ; SampleDesc.Count
+	mov dword ptr [rsp + 28h + (20h*4) + 026Ch], 0 ; SampleDesc.Quality
+
+	mov dword ptr [rsp + 28h + (20h*4) + 0270h], 1 ; NodeMask
+
+	mov qword ptr [rsp + 28h + (20h*4) + 0278h], 0 ; CachedPSO.pCachedBlob
+	mov dword ptr [rsp + 28h + (20h*4) + 0280h], 0 ; CachedPSO.CachedBlobSize
+
+	mov dword ptr [rsp + 28h + (20h*4) + 0288h], 0 ; Flags : D3D12_PIPELINE_STATE_FLAG_NONE
+
+	mov rcx, local_dxDevice
+	lea rdx, [rsp + 28h + (20h*4)]
+	lea r8, IID_ID3D12PipelineState
+	lea r9, local_dxDefault3DPipelineState
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateGraphicsPipelineState]
+	test eax, eax
+	jns _success_created3dpipelinestate
+	int 3
+
+_success_created3dpipelinestate:
+
+
+
+
+	add rsp, (28h + (20h*4) + 290h)
+	ret
+winDX12CreatePipelineStates ENDP
 
 winDX12CreateSwapChainResources PROC
 	sub rsp, 30h
@@ -846,12 +1021,19 @@ winDX12ReleaseSwapChainResources ENDP
 winDX12Exit PROC
 	sub rsp, 28h
 
-	call winDX12ReleaseSwapChainResources
+	
+
+	mov rcx, local_dxDefault3DPipelineState
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxDefault3DPipelineState, 0
 
 	mov rcx, local_dxRootSignature
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxRootSignature, 0
+
+	call winDX12ReleaseSwapChainResources
 
 	mov rcx, local_dxRTVDescriptorHeap
 	mov rax, qword ptr [rcx]
@@ -895,6 +1077,11 @@ winDX12Exit PROC
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxFactory, 0
 
+	; mov rcx, local_dxDebug
+	; mov rax, qword ptr [rcx]
+	; call qword ptr [rax + VTBL_IUnknown_Release]
+	; mov local_dxDebug, 0
+	; meh just let it leak
 
 
 	add rsp, 28h

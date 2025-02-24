@@ -2,6 +2,11 @@ VTBL_IUnknown_QueryInterface EQU 0h
 VTBL_IUnknown_AddRef EQU 08h
 VTBL_IUnknown_Release EQU 010h
 
+; ID3D12Debug : IUnknown
+; MIDL_INTERFACE("344488b7-6846-474b-b989-f027448245e0")
+EXTERN IID_ID3D12Debug:BYTE
+VTBL_ID3D12Debug_EnableDebugLayer EQU 018h
+
 ; ID3D10Blob : IUnknown
 ; MIDL_INTERFACE("8BA5FB08-5195-40e2-AC58-0D989C3A0102")
 EXTERN IID_ID3D10Blob:BYTE
@@ -226,6 +231,11 @@ VTBL_ID3D12DescriptorHeap_GetDesc EQU 040h
 VTBL_ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart EQU 048h
 VTBL_ID3D12DescriptorHeap_GetGPUDescriptorHandleForHeapStart EQU 050h
 
-; ID3D12RootSignature : public ID3D12DeviceChild
+; ID3D12RootSignature : ID3D12DeviceChild
 ; MIDL_INTERFACE("c54a6b66-72df-4ee8-8be5-a946a1429214")
 EXTERN IID_ID3D12RootSignature:BYTE
+
+; ID3D12PipelineState : ID3D12Pageable
+; MIDL_INTERFACE("765a30f3-f624-4c6f-a828-ace948622445")
+EXTERN IID_ID3D12PipelineState:BYTE
+VTBL_ID3D12PipelineState_GetCachedBlob EQU 040h
