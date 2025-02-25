@@ -71,6 +71,20 @@ RECT STRUCT
 	bottom DWORD ?
 RECT ENDS
 
+VERTEX3D STRUCT
+	x REAL4 ?
+	y REAL4 ?
+	z REAL4 ?
+	u REAL4 ?
+	v REAL4 ?
+	nx REAL4 ?
+	ny REAL4 ?
+	nz REAL4 ?
+	tanx REAL4 ?
+	tany REAL4 ?
+	tanz REAL4 ?
+VERTEX3D ENDS
+
 .DATA
 
 global_moduleSize DWORD 0
@@ -131,6 +145,9 @@ local_semanticPosition BYTE 'POSITION', 0
 local_semanticTexcoord BYTE 'TEXCOORD', 0
 local_semanticNormal BYTE 'NORMAL', 0
 local_semanticTanget BYTE 'TANGENT', 0
+
+local_float4_one REAL4 1.0, 1.0, 1.0, 1.0
+local_float4_negone REAL4 -1.0, -1.0, -1.0, -1.0
 
 
 ; 10000000.0
@@ -812,12 +829,135 @@ winDX12CreatePipelineStates PROC
 
 _success_created3dpipelinestate:
 
+	mov eax, local_float4_one
+	mov ecx, local_float4_negone
+	; pos: -1.0, -1.0, 0.0
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.x], ecx ; -1.0
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.y], ecx ; -1.0
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.z], 0 ; 0.0
+	; uv: 0, 0
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.u], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.v], 0 ; 0.0
+	; normal: 0, 0, 1
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.nx], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.ny], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.nz], eax ; 1.0
+	; tangent: 1, 0, 0
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.tanx], eax ; 1.0
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.tany], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + VERTEX3D.tanz], 0 ; 0.0
 
+	; pos: 1.0, -1.0, 0.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.x], eax ; 1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.y], ecx ; -1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.z], 0 ; 0.0
+	; uv: 1, 0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.u], eax ; 1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.v], 0 ; 0.0
+	; normal: 0, 0, 1
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.nx], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.ny], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.nz], eax ; 1.0
+	; tangent: 1, 0, 0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.tanx], eax ; 1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.tany], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.tanz], 0 ; 0.0
+
+	; pos: 1.0, 1.0, 0.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.x], eax ; 1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.y], eax ; 1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.z], 0 ; 0.0
+	; uv: 1, 1
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.u], eax ; 1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.v], eax ; 1.0
+	; normal: 0, 0, 1
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.nx], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.ny], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.nz], eax ; 1.0
+	; tangent: 1, 0, 0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.tanx], eax ; 1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.tany], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.tanz], 0 ; 0.0
+
+	lea rcx, [rsp + 28h + 80h]
+	mov rdx, (SIZEOF VERTEX3D)*3
+	call winDX12CreateUploadResource
 
 
 	add rsp, (28h + (20h*4) + 290h)
 	ret
 winDX12CreatePipelineStates ENDP
+
+; PARAM0 (RCX) : pointer to buffer
+; PARAM1 (RDX) : size of buffer
+; RETURN (RAX) : ID3D12Resource
+winDX12CreateUploadResource PROC
+	push rdi
+	push rsi
+	sub rsp, 0a8h
+	
+	mov rdi, rcx
+	mov rsi, rdx
+
+	lea rdx, [rsp + 48h]
+	mov dword ptr [rdx + 0h], 2 ; Type : D3D12_HEAP_TYPE_UPLOAD
+	mov dword ptr [rdx + 4h], 0 ; CPUPageProperty : D3D12_CPU_PAGE_PROPERTY_UNKNOWN
+	mov dword ptr [rdx + 8h], 0 ; MemoryPoolPreference : D3D12_MEMORY_POOL_UNKNOWN
+	mov dword ptr [rdx + 0Ch], 1 ; CreationNodeMask
+	mov dword ptr [rdx + 10h], 1 ; VisibleNodeMask
+
+	lea r9, [rsp + 48h + 14h]
+	mov dword ptr [r9], 1 ; Dimension : D3D12_RESOURCE_DIMENSION_BUFFER
+	mov qword ptr [r9 + 8h], 0 ; Alignment
+	mov qword ptr [r9 + 10h], rsi ; Width
+	mov dword ptr [r9 + 18h], 1 ; Height
+	mov word ptr [r9 + 1Ch], 1 ; DepthOrArraySize
+	mov word ptr [r9 + 1Eh], 1 ; MipLevels
+	mov dword ptr [r9 + 20h], 0 ; Format : DXGI_FORMAT_UNKNOWN
+	mov dword ptr [r9 + 24h], 1 ; SampleDesc.Count
+	mov dword ptr [r9 + 28h], 0 ; SampleDesc.Quality
+	mov dword ptr [r9 + 2Ch], 1 ; Layout : D3D12_TEXTURE_LAYOUT_ROW_MAJOR
+	mov dword ptr [r9 + 30h], 0 ; Flags : D3D12_RESOURCE_FLAG_NONE
+	
+	mov r8d, 0 ; HeapFlags : D3D12_HEAP_FLAG_NONE
+	mov dword ptr [rsp + 020h], 2755 ; InitialResourceState : D3D12_RESOURCE_STATE_GENERIC_READ
+	mov qword ptr [rsp + 028h], 0 ; pOptimizedClearValue
+	lea rax, IID_ID3D12Resource
+	mov qword ptr [rsp + 030h], rax ; riid
+	lea rax, [rsp + 040h]
+	mov qword ptr [rsp + 038h], rax ; ppResource
+	mov rcx, local_dxDevice
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateCommittedResource]
+
+	mov rcx, qword ptr [rsp + 040h]
+	xor edx, edx ; Subresource
+	xor r8d, r8d ; pReadRange
+	lea r9, [rsp + 048h]
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Resource_Map]
+
+	mov rcx, qword ptr [rsp + 048h]
+	xor edx, edx
+_move_next_byte:
+	mov al, byte ptr [rdi+rdx]
+	mov byte ptr [rcx+rdx], al
+	inc rdx
+	dec rsi
+	jnz _move_next_byte
+
+	mov rcx, qword ptr [rsp + 040h]
+	xor edx, edx ; Subresource
+	xor r8d, r8d ; pWrittenRange
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Resource_Unmap]
+
+	mov rax, qword ptr [rsp + 040h]
+	add rsp, 0a8h
+	pop rsi
+	pop rdi
+	ret
+winDX12CreateUploadResource ENDP
 
 winDX12CreateSwapChainResources PROC
 	sub rsp, 30h
