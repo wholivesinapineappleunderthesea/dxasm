@@ -80,10 +80,16 @@ VERTEX3D STRUCT
 	nx REAL4 ?
 	ny REAL4 ?
 	nz REAL4 ?
-	tanx REAL4 ?
-	tany REAL4 ?
-	tanz REAL4 ?
 VERTEX3D ENDS
+
+D3D12_VIEWPORT STRUCT
+	_TopLeftX REAL4 ?
+	_TopLeftY REAL4 ?
+	_Width REAL4 ?
+	_Height REAL4 ?
+	_MinDepth REAL4 ?
+	_MaxDepth REAL4 ?
+D3D12_VIEWPORT ENDS
 
 .DATA
 
@@ -129,6 +135,8 @@ local_dxRTVBuffer1 QWORD 0
 local_dxRootSignature QWORD 0
 local_dxDefault3DPipelineState QWORD 0
 
+local_testBuffer QWORD 0
+
 
 local_dxBackBufferIndex DWORD 0 
 
@@ -144,7 +152,6 @@ local_clearColour REAL4 0.0, 0.2, 0.4, 1.0
 local_semanticPosition BYTE 'POSITION', 0
 local_semanticTexcoord BYTE 'TEXCOORD', 0
 local_semanticNormal BYTE 'NORMAL', 0
-local_semanticTanget BYTE 'TANGENT', 0
 
 local_float4_one REAL4 1.0, 1.0, 1.0, 1.0
 local_float4_negone REAL4 -1.0, -1.0, -1.0, -1.0
@@ -660,8 +667,8 @@ _success_created3d12descriptorheap:
 
 	mov rcx, local_dxDevice
 	xor edx, edx ; NodeMask
-	mov r8, qword ptr [rsp + 028h + 030h] ; pShaderBytecode
-	mov r9, qword ptr [rsp + 028h + 038h] ; BytecodeLength
+	mov r8, qword ptr [rsp + 028h + 030h] ; 
+	mov r9, qword ptr [rsp + 028h + 038h] ; 
 	lea rax, IID_ID3D12RootSignature
 	mov qword ptr [rsp + 020h], rax ; riid
 	lea rax, local_dxRootSignature
@@ -684,10 +691,21 @@ winDX12CreatePipelineStates PROC
 	; float3 pos : POSITION;
 	; float2 uv : TEXCOORD;
 	; float3 normal : NORMAL;
-	; float3 tangent : TANGENT;
 	; rsp + 28h : D3D12_INPUT_ELEMENT_DESC[4]
 	; rsp + 28h + (20h*4) : D3D12_GRAPHICS_PIPELINE_STATE_DESC
-	sub rsp, (28h + (20h*4) + 290h)
+	sub rsp, (28h + (20h*4) + 2b0h)
+
+	; init stack to 0
+	xor eax, eax
+	lea rcx, [rsp + 28h]
+_cont_wipe_stack:
+	mov qword ptr [rcx+rax], 0
+	add rax, 8
+	cmp rax, (20h*4) + 2b0h
+	jne _cont_wipe_stack
+
+
+
 
 	; POSITION
 	lea rcx, local_semanticPosition
@@ -718,16 +736,6 @@ winDX12CreatePipelineStates PROC
 	mov dword ptr [rsp + 28h + 54h], 20 ; AlignedByteOffset
 	mov dword ptr [rsp + 28h + 58h], 0 ; InputSlotClass : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
 	mov dword ptr [rsp + 28h + 5Ch], 0 ; InstanceDataStepRate
-
-	; TANGENT
-	lea rcx, local_semanticTanget
-	mov qword ptr [rsp + 28h + 60h], rcx ; SemanticName
-	mov dword ptr [rsp + 28h + 68h], 0 ; SemanticIndex
-	mov dword ptr [rsp + 28h + 6Ch], 6 ; Format : DXGI_FORMAT_R32G32B32_FLOAT
-	mov dword ptr [rsp + 28h + 70h], 0 ; InputSlot
-	mov dword ptr [rsp + 28h + 74h], 32 ; AlignedByteOffset
-	mov dword ptr [rsp + 28h + 78h], 0 ; InputSlotClass : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
-	mov dword ptr [rsp + 28h + 7Ch], 0 ; InstanceDataStepRate
 
 	mov rax, local_dxRootSignature
 	mov qword ptr [rsp + 28h + (20h*4)], rax ; pRootSignature
@@ -769,13 +777,15 @@ winDX12CreatePipelineStates PROC
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 0Ch], 0 ; RasterizerState.DepthBias : D3D12_DEFAULT_DEPTH_BIAS
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 10h], 0 ; RasterizerState.DepthBiasClamp : D3D12_DEFAULT_DEPTH_BIAS_CLAMP
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 14h], 0 ; RasterizerState.SlopeScaledDepthBias : D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS
-	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 18h], 1 ; RasterizerState.DepthClipEnable
+	;mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 18h], 1 ; RasterizerState.DepthClipEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 18h], 0 ; RasterizerState.DepthClipEnable
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 1Ch], 0 ; RasterizerState.MultisampleEnable
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 20h], 0 ; RasterizerState.AntialiasedLineEnable
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 24h], 0 ; RasterizerState.ForcedSampleCount
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 28h], 0 ; RasterizerState.ConservativeRaster : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 
-	mov dword ptr [rsp + 28h + (20h*4) + 01F0h], 1 ; DepthStencilState.DepthEnable
+	;mov dword ptr [rsp + 28h + (20h*4) + 01F0h], 1 ; DepthStencilState.DepthEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h], 0 ; DepthStencilState.DepthEnable
 	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 4h], 1 ; DepthStencilState.DepthWriteMask : D3D12_DEPTH_WRITE_MASK_ALL
 	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 8h], 4 ; DepthStencilState.DepthFunc : D3D12_COMPARISON_FUNC_LESS
 	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 0Ch], 0 ; DepthStencilState.StencilEnable
@@ -792,7 +802,7 @@ winDX12CreatePipelineStates PROC
 
 	lea rax, [rsp + 28h]
 	mov qword ptr [rsp + 28h + (20h*4) + 0228h], rax ; InputLayout.pInputElementDescs
-	mov dword ptr [rsp + 28h + (20h*4) + 0230h], 4 ; InputLayout.NumElements
+	mov dword ptr [rsp + 28h + (20h*4) + 0230h], 3 ; InputLayout.NumElements
 
 	mov dword ptr [rsp + 28h + (20h*4) + 0238h], 0 ; IBStripCutValue : D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED
 	mov dword ptr [rsp + 28h + (20h*4) + 023Ch], 3 ; PrimitiveTopologyType : D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE
@@ -805,7 +815,8 @@ winDX12CreatePipelineStates PROC
 	mov dword ptr [rsp + 28h + (20h*4) + 0258h], 0 ; RTVFormats[5] : DXGI_FORMAT_UNKNOWN
 	mov dword ptr [rsp + 28h + (20h*4) + 025Ch], 0 ; RTVFormats[6] : DXGI_FORMAT_UNKNOWN
 	mov dword ptr [rsp + 28h + (20h*4) + 0260h], 0 ; RTVFormats[7] : DXGI_FORMAT_UNKNOWN
-	mov dword ptr [rsp + 28h + (20h*4) + 0264h], 40 ; DSVFormat : DXGI_FORMAT_D32_FLOAT
+	;mov dword ptr [rsp + 28h + (20h*4) + 0264h], 40 ; DSVFormat : DXGI_FORMAT_D32_FLOAT
+	mov dword ptr [rsp + 28h + (20h*4) + 0264h], 0 ; DSVFormat
 
 	mov dword ptr [rsp + 28h + (20h*4) + 0268h], 1 ; SampleDesc.Count
 	mov dword ptr [rsp + 28h + (20h*4) + 026Ch], 0 ; SampleDesc.Quality
@@ -842,10 +853,6 @@ _success_created3dpipelinestate:
 	mov dword ptr [rsp + 28h + 80h + VERTEX3D.nx], 0 ; 0.0
 	mov dword ptr [rsp + 28h + 80h + VERTEX3D.ny], 0 ; 0.0
 	mov dword ptr [rsp + 28h + 80h + VERTEX3D.nz], eax ; 1.0
-	; tangent: 1, 0, 0
-	mov dword ptr [rsp + 28h + 80h + VERTEX3D.tanx], eax ; 1.0
-	mov dword ptr [rsp + 28h + 80h + VERTEX3D.tany], 0 ; 0.0
-	mov dword ptr [rsp + 28h + 80h + VERTEX3D.tanz], 0 ; 0.0
 
 	; pos: 1.0, -1.0, 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.x], eax ; 1.0
@@ -858,10 +865,6 @@ _success_created3dpipelinestate:
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.nx], 0 ; 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.ny], 0 ; 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.nz], eax ; 1.0
-	; tangent: 1, 0, 0
-	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.tanx], eax ; 1.0
-	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.tany], 0 ; 0.0
-	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.tanz], 0 ; 0.0
 
 	; pos: 1.0, 1.0, 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.x], eax ; 1.0
@@ -874,17 +877,15 @@ _success_created3dpipelinestate:
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.nx], 0 ; 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.ny], 0 ; 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.nz], eax ; 1.0
-	; tangent: 1, 0, 0
-	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.tanx], eax ; 1.0
-	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.tany], 0 ; 0.0
-	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.tanz], 0 ; 0.0
 
 	lea rcx, [rsp + 28h + 80h]
 	mov rdx, (SIZEOF VERTEX3D)*3
 	call winDX12CreateUploadResource
 
+	mov local_testBuffer, rax
 
-	add rsp, (28h + (20h*4) + 290h)
+
+	add rsp, (28h + (20h*4) + 2b0h)
 	ret
 winDX12CreatePipelineStates ENDP
 
@@ -1010,8 +1011,9 @@ winDX12CreateSwapChainResources PROC
 winDX12CreateSwapChainResources ENDP
 
 winDX12Frame PROC
-	sub rsp, 50h
 	push rsi
+	sub rsp, 80h
+	
 
 	call winHighPrecisionTime
 	mov rsi, rax
@@ -1042,21 +1044,106 @@ winDX12Frame PROC
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_ResourceBarrier]
 
+	mov dword ptr [rsp +30h + D3D12_VIEWPORT._TopLeftX], 0
+	mov dword ptr [rsp +30h + D3D12_VIEWPORT._TopLeftY], 0
+
+	mov eax, local_windowRect.right
+	sub eax, local_windowRect.left
+	; convert to float
+	movd xmm0, eax
+	cvtdq2ps xmm0, xmm0
+	movd dword ptr [rsp +30h + D3D12_VIEWPORT._Width], xmm0
+
+	mov eax, local_windowRect.bottom
+	sub eax, local_windowRect.top
+	; convert to float
+	movd xmm0, eax
+	cvtdq2ps xmm0, xmm0
+	movd dword ptr [rsp +30h + D3D12_VIEWPORT._Height], xmm0
+
+	mov dword ptr [rsp +30h + D3D12_VIEWPORT._MinDepth], 0
+	mov eax, local_float4_one
+	mov dword ptr [rsp +30h + D3D12_VIEWPORT._MaxDepth], eax
+	
+	mov rcx, local_dxCommandList
+	mov edx, 1
+	lea r8, [rsp + 30h]
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_RSSetViewports]
+
+	mov rcx, local_dxCommandList
+	mov edx, 1
+	lea r8, local_windowRect
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_RSSetScissorRects]
+
+
+	; set render target
+	mov ecx, local_dxBackBufferIndex
+	lea rax, local_dxRTVHandle0
+	mov rax, qword ptr [rax + rcx*8]
+	mov qword ptr [rsp + 28h], rax
+	mov rcx, local_dxCommandList
+	mov edx, 1 ; NumRenderTargetDescriptors
+	lea r8, [rsp + 28h] ; pDescriptors
+	xor r9d, r9d ; RTsSingleHandleToDescriptorRange
+	mov qword ptr [rsp + 20h], 0 ; pDepthStencilDescriptor
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_OMSetRenderTargets]
+
 	mov ecx, local_dxBackBufferIndex
 	lea rax, local_dxRTVHandle0
 	lea rax, [rax + rcx*8]
 	mov rcx, local_dxCommandList
 	mov rdx, qword ptr [rax]
-	
 	lea r8, local_clearColour
-
 	xor r9d, r9d ; NumRects
 	mov qword ptr [rsp+020h], 0 ; pRects
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_ClearRenderTargetView]
 
+	
 
 
+	mov rcx, local_dxCommandList
+	mov rdx, local_dxRootSignature
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_SetGraphicsRootSignature]
+
+	mov rcx, local_dxCommandList
+	mov rdx, local_dxDefault3DPipelineState
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_SetPipelineState]
+
+	mov rcx, local_dxCommandList
+	mov edx, 4 ; PrimitiveTopology : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_IASetPrimitiveTopology]
+
+	mov rcx, local_testBuffer
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Resource_GetGPUVirtualAddress]
+	mov qword ptr [rsp + 28h], rax ; BufferLocation
+	mov dword ptr [rsp + 28h + 8], SIZEOF VERTEX3D * 3 ; SizeInBytes
+	mov dword ptr [rsp + 28h + 0Ch], SIZEOF VERTEX3D ; StrideInBytes
+
+
+	
+
+	mov rcx, local_dxCommandList
+	xor edx, edx ; StartSlot
+	mov r8d, 1 ; NumViews
+	lea r9, [rsp + 28h] ; pViews
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_IASetVertexBuffers]
+
+	mov rcx, local_dxCommandList
+	mov edx, 3 ; VertexCountPerInstance
+	mov r8d, 1 ; InstanceCount
+	xor r9d, r9d ; StartVertexLocation
+	mov dword ptr [rsp + 20h], 0 ; StartInstanceLocation
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_DrawInstanced]
 
 
 
@@ -1103,8 +1190,9 @@ winDX12Frame PROC
 
 	mov local_lastFrameTime, rsi
 
+	
+	add rsp, 80h
 	pop rsi
-	add rsp, 50h
 	ret
 winDX12Frame ENDP
 
@@ -1161,7 +1249,10 @@ winDX12ReleaseSwapChainResources ENDP
 winDX12Exit PROC
 	sub rsp, 28h
 
-	
+	mov rcx, local_testBuffer
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_testBuffer, 0
 
 	mov rcx, local_dxDefault3DPipelineState
 	mov rax, qword ptr [rcx]
