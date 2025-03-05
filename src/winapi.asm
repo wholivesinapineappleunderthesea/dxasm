@@ -758,15 +758,16 @@ _cont_wipe_stack:
 	mov dword ptr [rsp + 28h + (20h*4) + 58h + 1Ch], 0 ; StreamOutput.RasterizedStream
 	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h], 0 ; BlendState.AlphaToCoverageEnable
 	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 4h], 0 ; BlendState.IndependentBlendEnable
-	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h], 1 ; BlendState.RenderTarget[0].BlendEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h], 0 ; BlendState.RenderTarget[0].BlendEnable
 	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 4h], 0 ; BlendState.RenderTarget[0].LogicOpEnable
-	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 8h], 5 ; BlendState.RenderTarget[0].SrcBlend : D3D12_BLEND_SRC_ALPHA
-	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 0Ch], 6 ; BlendState.RenderTarget[0].DestBlend : D3D12_BLEND_INV_SRC_ALPHA
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 8h], 2 ; BlendState.RenderTarget[0].SrcBlend : D3D12_BLEND_ONE
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 0Ch], 1 ; BlendState.RenderTarget[0].DestBlend : D3D12_BLEND_ZERO
 	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 10h], 1 ; BlendState.RenderTarget[0].BlendOp : D3D12_BLEND_OP_ADD
 	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 14h], 2 ; BlendState.RenderTarget[0].SrcBlendAlpha : D3D12_BLEND_ONE
 	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 18h], 1 ; BlendState.RenderTarget[0].DestBlendAlpha : D3D12_BLEND_ZERO
 	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 1Ch], 1 ; BlendState.RenderTarget[0].BlendOpAlpha : D3D12_BLEND_OP_ADD
-	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 20h], 15 ; BlendState.RenderTarget[0].RenderTargetWriteMask : D3D12_COLOR_WRITE_ENABLE_ALL
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 20h], 4 ; BlendState.RenderTarget[0].LogicOp : D3D12_LOGIC_OP_NOOP
+	mov dword ptr [rsp + 28h + (20h*4) + 58h + 20h + 8h + 24h], 15 ; BlendState.RenderTarget[0].RenderTargetWriteMask : D3D12_COLOR_WRITE_ENABLE_ALL
 
 	mov dword ptr [rsp + 28h + (20h*4) + 01C0h], 0FFFFFFFFh ; SampleMask
 
@@ -854,25 +855,27 @@ _success_created3dpipelinestate:
 	mov dword ptr [rsp + 28h + 80h + VERTEX3D.ny], 0 ; 0.0
 	mov dword ptr [rsp + 28h + 80h + VERTEX3D.nz], eax ; 1.0
 
-	; pos: 1.0, -1.0, 0.0
+	
+
+	; pos: 1.0, 1.0, 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.x], eax ; 1.0
-	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.y], ecx ; -1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.y], eax ; 1.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.z], 0 ; 0.0
-	; uv: 1, 0
+	; uv: 1, 1
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.u], eax ; 1.0
-	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.v], 0 ; 0.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.v], eax ; 1.0
 	; normal: 0, 0, 1
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.nx], 0 ; 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.ny], 0 ; 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D) + VERTEX3D.nz], eax ; 1.0
 
-	; pos: 1.0, 1.0, 0.0
+	; pos: 1.0, -1.0, 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.x], eax ; 1.0
-	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.y], eax ; 1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.y], ecx ; -1.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.z], 0 ; 0.0
-	; uv: 1, 1
+	; uv: 1, 0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.u], eax ; 1.0
-	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.v], eax ; 1.0
+	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.v], 0 ; 0.0
 	; normal: 0, 0, 1
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.nx], 0 ; 0.0
 	mov dword ptr [rsp + 28h + 80h + (SIZEOF VERTEX3D)*2 + VERTEX3D.ny], 0 ; 0.0
