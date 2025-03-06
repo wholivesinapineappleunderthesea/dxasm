@@ -681,6 +681,7 @@ _success_created3d12descriptorheap:
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	
+
 	call winDX12CreatePipelineStates
 	
 	add rsp, 88h
@@ -1236,14 +1237,20 @@ winDX12ReleaseSwapChainResources PROC
 	sub rsp, 28h
 
 	mov rcx, local_dxRTVBuffer1
+	test rcx, rcx
+	jz _skip_rtv_buffer1
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxRTVBuffer1, 0
+_skip_rtv_buffer1:
 
 	mov rcx, local_dxRTVBuffer0
+	test rcx, rcx
+	jz _skip_rtv_buffer0
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxRTVBuffer0, 0
+_skip_rtv_buffer0:
 
 	add rsp, 28h
 	ret
@@ -1253,70 +1260,118 @@ winDX12Exit PROC
 	sub rsp, 28h
 
 	mov rcx, local_testBuffer
+	test rcx, rcx
+	jz _skip_test_buffer
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_testBuffer, 0
+_skip_test_buffer:
 
 	mov rcx, local_dxDefault3DPipelineState
+	test rcx, rcx
+	jz _skip_default3dpipelinestate
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxDefault3DPipelineState, 0
+_skip_default3dpipelinestate:
 
 	mov rcx, local_dxRootSignature
+	test rcx, rcx
+	jz _skip_root_signature
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxRootSignature, 0
+_skip_root_signature:
 
 	call winDX12ReleaseSwapChainResources
 
 	mov rcx, local_dxRTVDescriptorHeap
+	test rcx, rcx
+	jz _skip_rtv_descriptor_heap
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxRTVDescriptorHeap, 0
+_skip_rtv_descriptor_heap:
 
 	mov rcx, local_dxFence
+	test rcx, rcx
+	jz _skip_fence
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxFence, 0
+_skip_fence:
+
+	mov rcx, local_dxSwapChain
+	test rcx, rcx
+	jz _skip_swap_chain
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxSwapChain, 0
+_skip_swap_chain:
+
 
 	mov rcx, local_dxCommandList
+	test rcx, rcx
+	jz _skip_command_list
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxCommandList, 0
+_skip_command_list:
+
 
 	mov rcx, local_dxCommandAllocator
+	test rcx, rcx
+	jz _skip_command_allocator
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxCommandAllocator, 0
+_skip_command_allocator:
 
 	
 			 
 	mov rcx, local_dxCommandQueue
+	test rcx, rcx
+	jz _skip_command_queue
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxCommandQueue, 0
+_skip_command_queue:
 	
 	mov rcx, local_dxDevice
+	test rcx, rcx
+	jz _skip_device
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxDevice, 0
+_skip_device:
 
 	mov rcx, local_dxAdapter
+	test rcx, rcx
+	jz _skip_adapter
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxAdapter, 0
+_skip_adapter:
 
 	mov rcx, local_dxFactory
+	test rcx, rcx
+	jz _skip_factory
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxFactory, 0
+_skip_factory:
 
-	; mov rcx, local_dxDebug
-	; mov rax, qword ptr [rcx]
-	; call qword ptr [rax + VTBL_IUnknown_Release]
-	; mov local_dxDebug, 0
-	; meh just let it leak
+	mov rcx, local_dxDebug
+	test rcx, rcx
+	jz _skip_debug
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxDebug, 0
+_skip_debug:
 
+;335178
+;; const CLayeredObject<class NDebug::CDevice>::CContainedObject::`vftable'{for `IDXGIDebugProducer'}
+;.rdata:0000000180335178 ??_7CContainedObject@?$CLayeredObject@VCDevice@NDebug@@@@6BIDXGIDebugProducer@@@ dq offset ?QueryInterface@CContainedObject@?$CLayeredObject@VCDevice@NDebug@@@@WHI@EAAJAEBU_GUID@@PEAPEAX@Z
 
 	add rsp, 28h
 	ret
