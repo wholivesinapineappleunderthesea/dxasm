@@ -13,10 +13,17 @@ struct VS_OUT
     
 };
 
+cbuffer Constants : register(b0)
+{
+    float time;
+};
+
 VS_OUT VS_Main(VS_IN input)
 {
     VS_OUT output = (VS_OUT)0;
-    output.pos = float4(input.uv, 0.0f, 1.f);
+    output.pos = float4(input.pos, 1.f);
+    output.pos.x += sin(time);
+
     output.uv = input.uv;
     output.normal = input.normal;
     return output;

@@ -640,15 +640,22 @@ _success_created3d12descriptorheap:
 
 	call winDX12CreateSwapChainResources
 
+	lea rax, [rsp + 58h]
+	mov dword ptr [rax + 0h], 1 ; ParameterType : D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS
+	mov dword ptr [rax + 08h], 0 ; ShaderRegister : b0
+	mov dword ptr [rax + 08h + 04h], 0 ; RegisterSpace : 0
+	mov dword ptr [rax + 08h + 08h], 1 ; Num32BitValues : 1
+	mov dword ptr [rax + 18h], 0 ; ShaderVisibility : D3D12_SHADER_VISIBILITY_ALL
+
 	lea rcx, [rsp + 028h] ; D3D12_ROOT_SIGNATURE_DESC
-	mov dword ptr [rcx + 0h], 0 ; NumParameters
-	mov qword ptr [rcx + 8h], 0 ; pParameters
+	mov dword ptr [rcx + 0h], 1 ; NumParameters
+	mov qword ptr [rcx + 8h], rax ; pParameters
 	mov dword ptr [rcx + 10h], 0 ; NumStaticSamplers
 	mov qword ptr [rcx + 18h], 0 ; pStaticSamplers
 	mov dword ptr [rcx + 20h], 1 ; Flags : D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	mov edx, 1 ; D3D_ROOT_SIGNATURE_VERSION_1
 	lea r8, [rsp + 028h + 028h] ; ppBlob
-	mov qword ptr [r8], 0 ; ppErrorBlob
+	mov qword ptr [r8], 0 ; 
 	xor r9d, r9d ; ppErrorBlob
 	call D3D12SerializeRootSignature
 
@@ -1118,6 +1125,15 @@ winDX12Frame PROC
 	mov rdx, local_dxDefault3DPipelineState
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_SetPipelineState]
+
+	mov rcx, local_dxCommandList
+	xor edx, edx ; RootParameterIndex
+	mov r8d, 03f000000h ; SrcData
+	xor r9d, r9d ; DestOffsetIn32BitValues
+	
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_SetGraphicsRoot32BitConstant]
+
 
 	mov rcx, local_dxCommandList
 	mov edx, 4 ; PrimitiveTopology : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
