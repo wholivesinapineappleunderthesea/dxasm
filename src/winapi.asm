@@ -128,10 +128,13 @@ local_dxFenceValue DWORD 0
 local_dxSwapChain QWORD 0
 local_dxRTVDescriptorHeap QWORD 0
 local_dxRTVDescriptorHandleIncrementSize QWORD 0
+local_dxDepthDescriptorHeap QWORD 0
+local_dxDepthDescriptorHandleIncrementSize QWORD 0
 local_dxRTVHandle0 QWORD 0
 local_dxRTVHandle1 QWORD 0
 local_dxRTVBuffer0 QWORD 0
 local_dxRTVBuffer1 QWORD 0
+local_dxDepthBuffer QWORD 0
 local_dxRootSignature QWORD 0
 local_dxDefault3DPipelineState QWORD 0
 
@@ -638,6 +641,29 @@ _success_created3d12descriptorheap:
 	call qword ptr [rax + VTBL_ID3D12Device_GetDescriptorHandleIncrementSize]
 	mov local_dxRTVDescriptorHandleIncrementSize, rax
 
+	lea rdx, [rsp + 028h]
+	mov dword ptr [rdx], 3 ; D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+	mov dword ptr [rdx + 4], 1 ; NumDescriptors
+	mov dword ptr [rdx + 8], 0 ; Flags
+	mov dword ptr [rdx + 0Ch], 0 ; NodeMask
+	mov rcx, local_dxDevice
+	lea r8, IID_ID3D12DescriptorHeap
+	lea r9, local_dxDepthDescriptorHeap
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateDescriptorHeap]
+	test eax, eax
+	jns _success_created3d12depthdescriptorheap
+	int 3
+
+_success_created3d12depthdescriptorheap:
+
+	mov rcx, local_dxDevice
+	mov edx, 3 ; D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_GetDescriptorHandleIncrementSize]
+	mov local_dxDepthDescriptorHandleIncrementSize, rax
+	
+
 	call winDX12CreateSwapChainResources
 
 	lea rax, [rsp + 58h]
@@ -786,15 +812,13 @@ _cont_wipe_stack:
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 0Ch], 0 ; RasterizerState.DepthBias : D3D12_DEFAULT_DEPTH_BIAS
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 10h], 0 ; RasterizerState.DepthBiasClamp : D3D12_DEFAULT_DEPTH_BIAS_CLAMP
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 14h], 0 ; RasterizerState.SlopeScaledDepthBias : D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS
-	;mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 18h], 1 ; RasterizerState.DepthClipEnable
-	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 18h], 0 ; RasterizerState.DepthClipEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 18h], 1 ; RasterizerState.DepthClipEnable
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 1Ch], 0 ; RasterizerState.MultisampleEnable
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 20h], 0 ; RasterizerState.AntialiasedLineEnable
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 24h], 0 ; RasterizerState.ForcedSampleCount
 	mov dword ptr [rsp + 28h + (20h*4) + 01C4h + 28h], 0 ; RasterizerState.ConservativeRaster : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 
-	;mov dword ptr [rsp + 28h + (20h*4) + 01F0h], 1 ; DepthStencilState.DepthEnable
-	mov dword ptr [rsp + 28h + (20h*4) + 01F0h], 0 ; DepthStencilState.DepthEnable
+	mov dword ptr [rsp + 28h + (20h*4) + 01F0h], 1 ; DepthStencilState.DepthEnable
 	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 4h], 1 ; DepthStencilState.DepthWriteMask : D3D12_DEPTH_WRITE_MASK_ALL
 	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 8h], 4 ; DepthStencilState.DepthFunc : D3D12_COMPARISON_FUNC_LESS
 	mov dword ptr [rsp + 28h + (20h*4) + 01F0h + 0Ch], 0 ; DepthStencilState.StencilEnable
@@ -1308,6 +1332,15 @@ _skip_root_signature:
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxRTVDescriptorHeap, 0
 _skip_rtv_descriptor_heap:
+
+	mov rcx, local_dxDepthDescriptorHeap
+	test rcx, rcx
+	jz _skip_depth_descriptor_heap
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxDepthDescriptorHeap, 0
+_skip_depth_descriptor_heap:
+
 
 	mov rcx, local_dxFence
 	test rcx, rcx
