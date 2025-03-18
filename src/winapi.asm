@@ -848,8 +848,8 @@ _cont_wipe_stack:
 	mov dword ptr [rsp + 28h + (20h*4) + 0258h], 0 ; RTVFormats[5] : DXGI_FORMAT_UNKNOWN
 	mov dword ptr [rsp + 28h + (20h*4) + 025Ch], 0 ; RTVFormats[6] : DXGI_FORMAT_UNKNOWN
 	mov dword ptr [rsp + 28h + (20h*4) + 0260h], 0 ; RTVFormats[7] : DXGI_FORMAT_UNKNOWN
-	;mov dword ptr [rsp + 28h + (20h*4) + 0264h], 40 ; DSVFormat : DXGI_FORMAT_D32_FLOAT
-	mov dword ptr [rsp + 28h + (20h*4) + 0264h], 0 ; DSVFormat
+	mov dword ptr [rsp + 28h + (20h*4) + 0264h], 40 ; DSVFormat : DXGI_FORMAT_D32_FLOAT
+	;mov dword ptr [rsp + 28h + (20h*4) + 0264h], 0 ; DSVFormat
 
 	mov dword ptr [rsp + 28h + (20h*4) + 0268h], 1 ; SampleDesc.Count
 	mov dword ptr [rsp + 28h + (20h*4) + 026Ch], 0 ; SampleDesc.Quality
@@ -996,7 +996,7 @@ _move_next_byte:
 winDX12CreateUploadResource ENDP
 
 winDX12CreateSwapChainResources PROC
-	sub rsp, 30h
+	sub rsp, 0d0h
 	push rsi
 
 	mov rcx, local_dxRTVDescriptorHeap
@@ -1040,8 +1040,75 @@ winDX12CreateSwapChainResources PROC
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12Device_CreateRenderTargetView]
 
+	; depth stencil buffer
+	; local_dxDepthBuffer
+
+	; D3D12_HEAP_PROPERTIES
+	lea rdx, [rsp + 058h]
+	mov dword ptr [rdx + 0h], 1 ; Type : D3D12_HEAP_TYPE_DEFAULT
+	mov dword ptr [rdx + 4h], 0 ; CPUPageProperty : D3D12_CPU_PAGE_PROPERTY_UNKNOWN
+	mov dword ptr [rdx + 8h], 0 ; MemoryPoolPreference : D3D12_MEMORY_POOL_UNKNOWN
+	mov dword ptr [rdx + 0Ch], 1 ; CreationNodeMask
+	mov dword ptr [rdx + 10h], 1 ; VisibleNodeMask
+
+	; D3D12_RESOURCE_DESC
+	lea r9, [rsp + 58h + 18h]
+	mov dword ptr [r9], 3 ; Dimension : D3D12_RESOURCE_DIMENSION_TEXTURE2D
+	mov qword ptr [r9 + 8h], 0 ; Alignment
+	mov eax, local_windowRect.right
+	sub eax, local_windowRect.left
+	mov qword ptr [r9 + 10h], rax ; Width
+	mov eax, local_windowRect.bottom
+	sub eax, local_windowRect.top
+	mov dword ptr [r9 + 18h], eax ; Height
+	mov word ptr [r9 + 1Ch], 1 ; DepthOrArraySize
+	mov word ptr [r9 + 1Eh], 1 ; MipLevels
+	mov dword ptr [r9 + 20h], 40 ; Format : DXGI_FORMAT_D32_FLOAT
+	mov dword ptr [r9 + 24h], 1 ; SampleDesc.Count
+	mov dword ptr [r9 + 28h], 0 ; SampleDesc.Quality
+	mov dword ptr [r9 + 2Ch], 0 ; Layout : D3D12_TEXTURE_LAYOUT_UNKNOWN
+	mov dword ptr [r9 + 30h], 2 ; Flags : D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+
+	xor r8d, r8d ; D3D12_HEAP_FLAG_NONE
+
+
+	mov dword ptr [rsp + 020h], 16; InitialResourceState : D3D12_RESOURCE_STATE_DEPTH_WRITE
+	mov qword ptr [rsp + 028h], 0 ; pOptimizedClearValue
+	lea rax, IID_ID3D12Resource
+	mov qword ptr [rsp + 030h], rax ; riid
+	lea rax, local_dxDepthBuffer
+	mov qword ptr [rsp + 038h], rax ; ppResource
+	mov rcx, local_dxDevice
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateCommittedResource]
+	test eax, eax
+	jns _success_createddepthbuffer
+	int 3
+
+_success_createddepthbuffer:
+
+	mov dword ptr [rsp + 38h], 40 ; Format : DXGI_FORMAT_D32_FLOAT
+	mov dword ptr [rsp + 38h + 4h], 3 ; ViewDimension : D3D12_DSV_DIMENSION_TEXTURE2D
+	mov dword ptr [rsp + 38h + 8h], 0 ; Flags : D3D12_DSV_FLAG_NONE
+	mov dword ptr [rsp + 38h + 0Ch], 0
+	mov qword ptr [rsp + 38h + 010h], 0
+	mov qword ptr [rsp + 38h + 018h], 0
+
+	mov rcx, local_dxDepthDescriptorHeap
+	lea rdx, [rsp + 28h]
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart]
+	
+	mov rcx, local_dxDevice
+	mov rdx, local_dxDepthBuffer ; pResource
+	lea r8, [rsp + 38h] ; pDesc
+	mov r9, qword ptr [rsp + 28h] ; DestDescriptor
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12Device_CreateDepthStencilView]
+
+
 	pop rsi
-	add rsp, 30h
+	add rsp, 0d0h
 	ret
 winDX12CreateSwapChainResources ENDP
 
@@ -1112,6 +1179,12 @@ winDX12Frame PROC
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_RSSetScissorRects]
 
+	mov rcx, local_dxDepthDescriptorHeap
+	lea rdx, [rsp + 48h]
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart]
+
+
 
 	; set render target
 	mov ecx, local_dxBackBufferIndex
@@ -1122,7 +1195,8 @@ winDX12Frame PROC
 	mov edx, 1 ; NumRenderTargetDescriptors
 	lea r8, [rsp + 28h] ; pDescriptors
 	xor r9d, r9d ; RTsSingleHandleToDescriptorRange
-	mov qword ptr [rsp + 20h], 0 ; pDepthStencilDescriptor
+	lea rax, [rsp + 48h]
+	mov qword ptr [rsp + 20h], rax ; pDepthStencilDescriptor
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_OMSetRenderTargets]
 
@@ -1291,6 +1365,14 @@ _skip_rtv_buffer1:
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxRTVBuffer0, 0
 _skip_rtv_buffer0:
+
+	mov rcx, local_dxDepthBuffer
+	test rcx, rcx
+	jz _skip_depth_buffer
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IUnknown_Release]
+	mov local_dxDepthBuffer, 0
+_skip_depth_buffer:
 
 	add rsp, 28h
 	ret
