@@ -1071,9 +1071,13 @@ winDX12CreateSwapChainResources PROC
 
 	xor r8d, r8d ; D3D12_HEAP_FLAG_NONE
 
+	lea rax, [rsp + 0A8h]
+	mov dword ptr [rax + 0h], 40 ; Format : DXGI_FORMAT_D32_FLOAT
+	mov dword ptr [rax + 4h], 03f800000h ; Depth
+	mov dword ptr [rax + 8h], 0 ; Stencil
 
 	mov dword ptr [rsp + 020h], 16; InitialResourceState : D3D12_RESOURCE_STATE_DEPTH_WRITE
-	mov qword ptr [rsp + 028h], 0 ; pOptimizedClearValue
+	mov qword ptr [rsp + 028h], rax ; pOptimizedClearValue
 	lea rax, IID_ID3D12Resource
 	mov qword ptr [rsp + 030h], rax ; riid
 	lea rax, local_dxDepthBuffer
@@ -1200,6 +1204,19 @@ winDX12Frame PROC
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_OMSetRenderTargets]
 
+	mov rcx, local_dxCommandList
+	mov rdx, qword ptr [rsp + 48h]
+	mov r8d, 1 ; ClearFlags : D3D12_CLEAR_FLAG_DEPTH
+	mov r9d, 03f800000h ; Depth
+	movd xmm3, r9d
+	mov qword ptr [rsp + 20h], 0 ; 
+	mov qword ptr [rsp + 28h], 0 ; 
+	mov qword ptr [rsp + 30h], 0 ; 
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_ClearDepthStencilView]
+
+
+
 	mov ecx, local_dxBackBufferIndex
 	lea rax, local_dxRTVHandle0
 	lea rax, [rax + rcx*8]
@@ -1210,6 +1227,8 @@ winDX12Frame PROC
 	mov qword ptr [rsp+020h], 0 ; pRects
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_ClearRenderTargetView]
+
+
 
 	
 
