@@ -115,6 +115,8 @@ local_windowRect RECT <>
 
 local_heapHandle QWORD 0
 
+local_dxInit BYTE 0
+
 local_dxDebug QWORD 0
 local_dxFactory QWORD 0
 local_dxAdapter QWORD 0
@@ -139,6 +141,8 @@ local_dxRootSignature QWORD 0
 local_dxDefault3DPipelineState QWORD 0
 
 local_testBuffer QWORD 0
+
+
 
 
 local_dxBackBufferIndex DWORD 0 
@@ -281,6 +285,15 @@ winWndProc PROC
 	xor eax, eax
 	jmp _wndproc_handled
 _not_wm_destroy:
+
+	; WM_SIZE
+	cmp edx, 05h ; WM_SIZE
+	jne _not_wm_size
+	call winDX12Resize
+	jmp _call_defwndproc
+
+
+_not_wm_size:
 
 	jmp _call_defwndproc
 _wndproc_handled:
@@ -496,6 +509,17 @@ _enum_adapter1_success:
 	jmp _enum_adapter1_start
 	
 _enum_adapter1_device_success:
+
+	call winDX12CreateDeviceAndEverything
+
+	mov local_dxInit, 1
+	
+	add rsp, 88h
+	ret
+winDX12Init ENDP
+
+winDX12CreateDeviceAndEverything PROC
+	sub rsp, 88h
 
 	mov rcx, local_dxAdapter
 	mov edx, 0b000h ; D3D_FEATURE_LEVEL_11_0
@@ -716,10 +740,10 @@ _success_created3d12depthdescriptorheap:
 	
 
 	call winDX12CreatePipelineStates
-	
+
 	add rsp, 88h
 	ret
-winDX12Init ENDP
+winDX12CreateDeviceAndEverything ENDP
 
 winDX12CreatePipelineStates PROC
 	; float3 pos : POSITION;
@@ -1120,9 +1144,20 @@ winDX12Frame PROC
 	push rsi
 	sub rsp, 80h
 	
+	
 
 	call winHighPrecisionTime
 	mov rsi, rax
+
+	mov eax, local_windowRect.left
+	sub eax, local_windowRect.right
+	test eax, eax
+	jz _frame_end
+
+	mov eax, local_windowRect.top
+	sub eax, local_windowRect.bottom
+	test eax, eax
+	jz _frame_end
 
 	mov rcx, local_dxCommandAllocator
 	mov rax, qword ptr [rcx]
@@ -1320,6 +1355,8 @@ winDX12Frame PROC
 
 	call winDX12SyncAndWaitFence
 
+_frame_end:
+
 	; flip back buffer index
 	mov eax, local_dxBackBufferIndex
 	xor eax, 1
@@ -1327,7 +1364,6 @@ winDX12Frame PROC
 
 	mov local_lastFrameTime, rsi
 
-	
 	add rsp, 80h
 	pop rsi
 	ret
@@ -1397,7 +1433,67 @@ _skip_depth_buffer:
 	ret
 winDX12ReleaseSwapChainResources ENDP
 
-winDX12Exit PROC
+winDX12Resize PROC
+	sub rsp, 038h
+	mov al, local_dxInit
+	test al, al
+	jz _skip_not_init
+
+	call winDX12ReleaseSwapChainResources
+
+	call winDX12SyncAndWaitFence
+
+	mov rcx, global_windowHandle
+	lea rdx, local_windowRect
+	call GetClientRect
+
+	mov rcx, local_dxSwapChain
+
+	mov edx, 2 ; BufferCount
+
+	mov r8d, local_windowRect.right
+	sub r8d, local_windowRect.left ; Width
+
+	mov r9d, local_windowRect.bottom
+	sub r9d, local_windowRect.top ; Height
+
+	test r8d, r8d
+	jz _skip_not_init
+	test r9d, r9d
+	jz _skip_not_init
+
+
+	mov dword ptr [rsp + 020h], 0 ; Format : DXGI_FORMAT_UNKNOWN
+	mov dword ptr [rsp + 028h], 0 ; SwapChainFlags : 0
+
+	mov rax, qword ptr [rcx]
+	call qword ptr [rax + VTBL_IDXGISwapChain_ResizeBuffers]
+
+	cmp eax, 0887A0005h
+	jne _not_removed
+
+	; uh oh	
+	call winDX12DestroyDeviceAndEverything
+	call winDX12CreateDeviceAndEverything
+	jmp _skip_not_init
+
+_not_removed:
+	test eax, eax
+	jns _success_resized
+	int 3
+
+_success_resized:
+
+	call winDX12CreateSwapChainResources
+
+	mov local_dxBackBufferIndex, 0
+
+_skip_not_init:
+	add rsp, 038h
+	ret
+winDX12Resize ENDP
+
+winDX12DestroyDeviceAndEverything PROC
 	sub rsp, 28h
 
 	mov rcx, local_testBuffer
@@ -1476,8 +1572,6 @@ _skip_command_list:
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxCommandAllocator, 0
 _skip_command_allocator:
-
-	
 			 
 	mov rcx, local_dxCommandQueue
 	test rcx, rcx
@@ -1494,6 +1588,15 @@ _skip_command_queue:
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxDevice, 0
 _skip_device:
+
+	add rsp, 28h
+	ret
+winDX12DestroyDeviceAndEverything ENDP
+
+winDX12Exit PROC
+	sub rsp, 28h
+
+	call winDX12DestroyDeviceAndEverything
 
 	mov rcx, local_dxAdapter
 	test rcx, rcx
@@ -1518,6 +1621,8 @@ _skip_factory:
 	call qword ptr [rax + VTBL_IUnknown_Release]
 	mov local_dxDebug, 0
 _skip_debug:
+
+	mov local_dxInit, 0
 
 ;335178
 ;; const CLayeredObject<class NDebug::CDevice>::CContainedObject::`vftable'{for `IDXGIDebugProducer'}
