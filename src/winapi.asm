@@ -2,6 +2,8 @@ INCLUDE masm_macros.inc
 INCLUDE wincomobj.inc
 INCLUDE resrc.inc
 
+EXTERN EnableThreadProfiling: PROC
+
 EXTERN GetProcAddress: PROC
 EXTERN GetModuleHandleW: PROC
 EXTERN GetModuleFileNameW: PROC
@@ -146,8 +148,13 @@ local_testBuffer QWORD 0
 
 
 local_dxBackBufferIndex DWORD 0 
-
+local_appStartTime QWORD 0
 local_lastFrameTime QWORD 0
+local_appTimeInSeconds REAL8 0.0
+
+
+
+
 
 .CONST
 
@@ -165,7 +172,7 @@ local_float4_negone REAL4 -1.0, -1.0, -1.0, -1.0
 
 
 ; 10000000.0
-local_interruptFrequency REAL8 10000000.0, 10000000.0
+local_interruptFrequency REAL8 100.0, 100.0
 
 .CODE
 
@@ -192,7 +199,10 @@ winHighPrecisionTimeToSeconds PROC
 winHighPrecisionTimeToSeconds ENDP
 
 winInit PROC
-	sub rsp, 28h
+	sub rsp, 58h
+
+	call winHighPrecisionTime
+	mov local_appStartTime, rax
 
 	; set global_moduleBaseAddr
 	xor rcx, rcx
@@ -238,7 +248,7 @@ _cont_walk_backslash:
 	call winHighPrecisionTime
 	mov local_lastFrameTime, rax
 
-	add rsp, 28h
+	add rsp, 58h
 	ret
 winInit ENDP
 
@@ -1149,6 +1159,15 @@ winDX12Frame PROC
 	call winHighPrecisionTime
 	mov rsi, rax
 
+	; set local_appTimeInSeconds
+	sub rax, local_appStartTime
+	mov rcx, rax
+	call winHighPrecisionTimeToSeconds
+	; move double into local_appTimeInSeconds
+	movq rax, xmm0
+	mov local_appTimeInSeconds, rax
+	
+
 	mov eax, local_windowRect.left
 	sub eax, local_windowRect.right
 	test eax, eax
@@ -1278,9 +1297,15 @@ winDX12Frame PROC
 	mov rax, qword ptr [rcx]
 	call qword ptr [rax + VTBL_ID3D12GraphicsCommandList_SetPipelineState]
 
+	mov rax, local_appTimeInSeconds
+	; conv double to single float
+	movq xmm0, rax
+	cvtpd2ps xmm0, xmm0
+	movd r8d, xmm0 ; SrcData
+
 	mov rcx, local_dxCommandList
 	xor edx, edx ; RootParameterIndex
-	mov r8d, 03f000000h ; SrcData
+	; mov r8d, eax ; SrcData
 	xor r9d, r9d ; DestOffsetIn32BitValues
 	
 	mov rax, qword ptr [rcx]
